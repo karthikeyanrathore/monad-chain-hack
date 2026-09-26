@@ -138,3 +138,11 @@ def test_model_failure_is_recorded_as_error(client, monkeypatch):
     v = client.get(f"/verdicts/{RID}").json()
     assert v["status"] == "error" and "verifier machine down" in v["reason"]
     assert service.chain.verdicts == []
+
+
+def test_health_reports_verifier_machine(client, monkeypatch):
+    async def down(url):
+        return False
+
+    monkeypatch.setattr(service, "machine_online", down)
+    assert client.get("/health").json()["verifier_machine_online"] is False

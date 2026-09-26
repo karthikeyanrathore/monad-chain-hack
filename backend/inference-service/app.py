@@ -1,6 +1,7 @@
 """Inference Service: routes a prompt to the machine running the chosen model,
 returns the answer, records the paid request on Monad, and hands it to the Verification Service."""
 
+import asyncio
 import logging
 import os
 import secrets
@@ -122,11 +123,22 @@ async def health():
     return {"status": "ok", "onchain": chain is not None}
 
 
+async def machine_online(url: str | None) -> bool:
+    if not url:
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=4) as client:
+            return (await client.get(f"{url}/api/version")).status_code == 200
+    except httpx.HTTPError:
+        return False
+
+
 @app.get("/models")
 async def models():
+    online = await asyncio.gather(*(machine_online(m["url"]) for m in MACHINES.values()))
     result = []
-    for size, m in MACHINES.items():
-        item = {"model": size, "provider": m["provider"], "configured": bool(m["url"] and m["model"])}
+    for (size, m), up in zip(MACHINES.items(), online):
+        item = {"model": size, "provider": m["provider"], "configured": bool(m["url"] and m["model"]), "online": up}
         if chain:
             item["price_wei"] = str(await chain.price(size))
         result.append(item)

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { Model } from "@/lib/models";
 import { MODELS } from "@/lib/models";
 import { formatMon } from "@/lib/api";
@@ -14,6 +13,7 @@ interface PromptBoxProps {
   setModel: (m: Model) => void;
   centered?: boolean;
   prices?: Record<string, string>;
+  disabled?: boolean;
 }
 
 export default function PromptBox({
@@ -25,63 +25,53 @@ export default function PromptBox({
   setModel,
   centered,
   prices = {},
+  disabled,
 }: PromptBoxProps) {
-  const [showModelMenu, setShowModelMenu] = useState(false);
-
   return (
     <div className={`w-full ${centered ? "max-w-2xl" : "max-w-3xl mx-auto"}`}>
-      {/* Input box — sirf textarea + send button, ismein model selector nahi */}
-      <div className="flex items-end gap-2 rounded-2xl bg-[#2a2a2a] border border-white/10 px-3 py-2 focus-within:border-orange-500/50 transition">
+      <div className="rounded-2xl border border-line bg-panel/80 backdrop-blur shadow-[0_0_0_1px_rgba(131,110,249,0.05),0_20px_60px_-20px_rgba(131,110,249,0.35)] focus-within:border-violet/50 transition">
         <textarea
+          id="prompt"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          rows={1}
-          placeholder="Ask anything…"
-          className="flex-1 bg-transparent resize-none outline-none text-[15px] text-gray-100 placeholder-gray-500 py-1.5 max-h-40"
+          rows={centered ? 3 : 1}
+          placeholder="Ask anything. The answer gets verified on Monad."
+          className="block w-full resize-none bg-transparent px-4 pt-4 pb-2 text-[15px] text-ink placeholder:text-muted outline-none max-h-48"
         />
-        <button
-          onClick={onSend}
-          disabled={!input.trim()}
-          className="shrink-0 rounded-full bg-orange-600 hover:bg-orange-500 disabled:bg-white/10 disabled:cursor-not-allowed w-8 h-8 flex items-center justify-center transition"
-        >
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="white">
-            <path d="M10 3l6 6h-4v8H8V9H4l6-6z" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Model selector — box ke BAHAR, right side pe */}
-      <div className="flex justify-end mt-2">
-        <div className="relative">
-          <button
-            onClick={() => setShowModelMenu((v) => !v)}
-            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-400 hover:bg-white/5 transition"
-          >
-            {model.name}
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" className="text-gray-500">
-              <path d="M5.5 7.5L10 12l4.5-4.5H5.5z" />
-            </svg>
-          </button>
-          {showModelMenu && (
-            <div className="absolute top-full mt-1 right-0 w-56 rounded-xl bg-[#2a2a2a] border border-white/10 shadow-xl overflow-hidden z-10">
-              {MODELS.map((m) => (
+        <div className="flex items-center justify-between gap-3 px-3 pb-3">
+          {/* Model picker: price is what one prompt costs from your deposit */}
+          <div role="radiogroup" aria-label="Model" className="flex rounded-xl bg-black/30 p-1 border border-line">
+            {MODELS.map((m) => {
+              const active = m.id === model.id;
+              return (
                 <button
                   key={m.id}
-                  onClick={() => {
-                    setModel(m);
-                    setShowModelMenu(false);
-                  }}
-                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition ${
-                    m.id === model.id ? "text-orange-400" : "text-gray-200"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setModel(m)}
+                  className={`rounded-lg px-3 py-1.5 text-xs transition ${
+                    active ? "bg-violet text-white shadow-[0_0_20px_-4px_rgba(131,110,249,0.8)]" : "text-muted hover:text-ink"
                   }`}
                 >
-                  {m.name}
-                  {prices[m.id] && <span className="float-right text-gray-500">{formatMon(prices[m.id])} MON</span>}
+                  <span className="font-medium">{m.name}</span>
+                  {prices[m.id] && (
+                    <span className={`ml-1.5 font-mono ${active ? "text-white/75" : "text-muted"}`}>{formatMon(prices[m.id])} MON</span>
+                  )}
                 </button>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
+          <button
+            onClick={onSend}
+            disabled={!input.trim() || disabled}
+            aria-label="Send"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet to-[#5b45e0] text-white shadow-[0_8px_24px_-8px_rgba(131,110,249,0.9)] transition hover:brightness-110 disabled:from-white/10 disabled:to-white/10 disabled:shadow-none disabled:cursor-not-allowed"
+          >
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 3l6 6h-4v8H8V9H4l6-6z" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>

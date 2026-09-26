@@ -163,10 +163,21 @@ async def verify(req: VerifyRequest) -> None:
         v.update(status="error", reason=str(e))
 
 
+async def machine_online(url: str) -> bool:
+    try:
+        async with httpx.AsyncClient(timeout=4) as client:
+            return (await client.get(f"{url}/api/version")).status_code == 200
+    except httpx.HTTPError:
+        return False
+
+
 @app.get("/health")
 async def health():
+    """Liveness, plus whether the verifier machine(s) that re-run requests are reachable."""
+    urls = sorted(set(VERIFY_URLS.values()))
+    online = await asyncio.gather(*(machine_online(u) for u in urls))
     return {"status": "ok", "onchain": chain is not None, "sample_rate": SAMPLE_RATE, "threshold": THRESHOLD,
-            "prefix_chars": PREFIX_CHARS}
+            "prefix_chars": PREFIX_CHARS, "verifier_machine_online": all(online)}
 
 
 @app.post("/verify", status_code=202)

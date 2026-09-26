@@ -188,3 +188,12 @@ def test_account_endpoints_need_chain(client):
 def test_cors_allows_the_dashboard(client):
     r = client.options("/infer", headers={"Origin": "https://infermon.vercel.app", "Access-Control-Request-Method": "POST"})
     assert r.status_code == 200 and r.headers["access-control-allow-origin"] in ("*", "https://infermon.vercel.app")
+
+
+def test_models_reports_machine_online(client, monkeypatch):
+    async def up(url):
+        return url == "https://machine1.ngrok.app"
+
+    monkeypatch.setattr(service, "machine_online", up)
+    by_model = {m["model"]: m for m in client.get("/models").json()}
+    assert by_model["1B"]["online"] is True and by_model["3B"]["online"] is False

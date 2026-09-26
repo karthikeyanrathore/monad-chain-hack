@@ -9,7 +9,15 @@ export interface ModelInfo {
   model: string;
   provider: string;
   configured: boolean;
+  online?: boolean;
   price_wei?: string;
+}
+
+export interface VerifierHealth {
+  status: string;
+  sample_rate: number;
+  threshold: number;
+  verifier_machine_online?: boolean;
 }
 
 export interface Account {
@@ -63,6 +71,7 @@ export const depositTx = (address: string, amount: string) =>
   call<UnsignedTx>("/tx/deposit", { method: "POST", body: JSON.stringify({ address, amount }) });
 export const withdrawTx = (address: string, amount: string) =>
   call<UnsignedTx>("/tx/withdraw", { method: "POST", body: JSON.stringify({ address, amount }) });
+export const getVerifierHealth = () => call<VerifierHealth>("/health", undefined, VERIFIER);
 export const getVerdict = (requestId: string) => call<Verdict>(`/verdicts/${requestId}`, undefined, VERIFIER);
 export const infer = (body: { model: string; prompt: string; nonce: number; signature: string }) =>
   call<InferResult>("/infer", { method: "POST", body: JSON.stringify(body) });
