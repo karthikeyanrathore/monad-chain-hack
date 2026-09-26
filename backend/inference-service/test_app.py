@@ -183,3 +183,8 @@ def test_deposit_rejects_bad_input(onchain):
 
 def test_account_endpoints_need_chain(client):
     assert client.get(f"/account/{USER.address}").status_code == 503
+
+
+def test_cors_allows_the_dashboard(client):
+    r = client.options("/infer", headers={"Origin": "https://infermon.vercel.app", "Access-Control-Request-Method": "POST"})
+    assert r.status_code == 200 and r.headers["access-control-allow-origin"] in ("*", "https://infermon.vercel.app")

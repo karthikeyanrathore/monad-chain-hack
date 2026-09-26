@@ -14,6 +14,7 @@ from typing import Literal
 import httpx
 from eth_account import Account
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from web3 import AsyncWeb3, Web3
 
@@ -81,6 +82,15 @@ chain = (
 )
 
 app = FastAPI(title="Inference Truth · Verification Service")
+
+# Let the dashboard (e.g. on Vercel) call this service from the browser.
+# CORS_ORIGINS: comma-separated origins, default "*" for the demo.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",")],
+    allow_methods=["GET", "POST"],
+    allow_headers=["content-type"],
+)
 
 # request_id -> verdict record (in memory; enough for a demo)
 verdicts: dict[str, dict] = {}

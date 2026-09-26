@@ -62,6 +62,18 @@ cd backend/scripts
 
 **Serving models on any machine:** copy `backend/scripts/serve-models.sh` there and run `./serve-models.sh 1B`, `./serve-models.sh 3B` or `./serve-models.sh 1B 3B`. It starts Ollama, pulls the models and prints a public ngrok URL. Add `NGROK_URL=<your-domain>.ngrok-free.dev` to keep the URL fixed.
 
+### Demo on Vercel (dashboard public, backend on this laptop)
+The dashboard runs on Vercel. The two backend services stay on this laptop, exposed with Cloudflare quick tunnels (`brew install cloudflared`, no account needed).
+```bash
+cd backend/scripts
+./05b-start-verifier.sh          # terminal 1
+./05-start-service.sh            # terminal 2
+./expose-backend.sh              # terminal 3: public URLs for both services (keep running)
+npx vercel login                 # one time
+./deploy-frontend.sh             # builds and deploys the dashboard with those URLs, prints the Vercel link
+```
+The tunnel URLs change every time `expose-backend.sh` restarts. After a restart, run `./deploy-frontend.sh` again.
+
 ### Manual way: step by step
 
 **1. Create wallets** (one time; each asks for a password)

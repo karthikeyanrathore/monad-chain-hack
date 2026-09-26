@@ -5,3 +5,5 @@ machine2.env
 ollama.log
 ngrok.log
 machine3.env
+public.env
+.tunnel-*.log

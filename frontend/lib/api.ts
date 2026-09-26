@@ -1,4 +1,9 @@
-// Calls to the Inference Service (/backend) and Verification Service (/verifier), proxied by next.config.ts.
+// Calls to the Inference Service and Verification Service.
+// Deployed (e.g. Vercel): set NEXT_PUBLIC_BACKEND_URL / NEXT_PUBLIC_VERIFIER_URL to their public URLs; the
+// browser calls them directly (both services allow CORS), so there is no proxy timeout on slow answers.
+// Local dev: leave them unset; next.config.ts proxies /backend and /verifier to localhost.
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || "/backend";
+const VERIFIER = process.env.NEXT_PUBLIC_VERIFIER_URL || "/verifier";
 
 export interface ModelInfo {
   model: string;
@@ -36,14 +41,16 @@ export interface Verdict {
   reason?: string;
 }
 
-async function call<T>(path: string, init?: RequestInit, base = "/backend"): Promise<T> {
+async function call<T>(path: string, init?: RequestInit, base = BACKEND): Promise<T> {
   const res = await fetch(`${base}${path}`, {
     ...init,
     headers: { "content-type": "application/json", ...init?.headers },
+  }).catch(() => {
+    throw new Error("The InferMON backend is not reachable right now. Please try again shortly.");
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) {
-    if (!body) throw new Error(`Backend not reachable (${res.status}). Is the Inference Service running on port 8000?`);
+    if (!body) throw new Error("The InferMON backend is not reachable right now. Please try again shortly.");
     const detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail ?? body);
     throw new Error(detail);
   }
@@ -56,7 +63,7 @@ export const depositTx = (address: string, amount: string) =>
   call<UnsignedTx>("/tx/deposit", { method: "POST", body: JSON.stringify({ address, amount }) });
 export const withdrawTx = (address: string, amount: string) =>
   call<UnsignedTx>("/tx/withdraw", { method: "POST", body: JSON.stringify({ address, amount }) });
-export const getVerdict = (requestId: string) => call<Verdict>(`/verdicts/${requestId}`, undefined, "/verifier");
+export const getVerdict = (requestId: string) => call<Verdict>(`/verdicts/${requestId}`, undefined, VERIFIER);
 export const infer = (body: { model: string; prompt: string; nonce: number; signature: string }) =>
   call<InferResult>("/infer", { method: "POST", body: JSON.stringify(body) });
 

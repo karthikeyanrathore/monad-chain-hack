@@ -9,6 +9,7 @@ from typing import Literal
 
 import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from web3 import Web3
 
@@ -44,6 +45,15 @@ chain = (
 )
 
 app = FastAPI(title="Inference Truth · Inference Service")
+
+# Let the dashboard (e.g. on Vercel) call this service from the browser.
+# CORS_ORIGINS: comma-separated origins, default "*" for the demo.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",")],
+    allow_methods=["GET", "POST"],
+    allow_headers=["content-type"],
+)
 
 
 class InferRequest(BaseModel):
