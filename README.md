@@ -1,2 +1,1 @@
-# monad-chain-hack
-# monad-chain-hack
+# Trustless AI Inference on Monad
