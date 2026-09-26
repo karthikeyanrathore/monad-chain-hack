@@ -1,0 +1,360 @@
+<title>Inference Truth Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Deliberately single dark theme: presentation / hackathon stage look */
+  :root {
+    color-scheme: dark;
+    --bg: #0A0912;
+    --panel: #13111E;
+    --panel-2: #1A1729;
+    --line: #2C2844;
+    --text: #EEEBFA;
+    --muted: #9A94B8;
+    --violet: #836EF9;
+    --teal: #3FD0C9;
+    --amber: #F5B544;
+    --green: #3DDC97;
+    --red: #FF5A76;
+    --display: "Unbounded", "Helvetica Neue", Arial, sans-serif;
+    --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  body {
+    background:
+      radial-gradient(1200px 500px at 85% 110%, rgba(131,110,249,.14), transparent 60%),
+      linear-gradient(var(--bg), var(--bg));
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .page { max-width: 1320px; margin: 0 auto; padding: 40px 20px 56px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px 32px; margin-bottom: 24px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--violet); margin: 0 0 8px; }
+  h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 4.2vw, 44px); line-height: 1.05; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+  h1 span { color: var(--violet); }
+  .tagline { color: var(--muted); margin: 10px 0 0; max-width: 60ch; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; padding: 6px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); color: var(--text); white-space: nowrap; }
+  .sw { width: 18px; height: 10px; border-radius: 3px; }
+  .sw.off { border: 1.5px dashed var(--teal); }
+  .sw.on { background: rgba(131,110,249,.35); border: 1.5px solid var(--violet); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
+
+  .diagram { overflow-x: auto; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); padding: 12px; }
+  .diagram svg { display: block; width: 100%; min-width: 1000px; height: auto; }
+
+  /* SVG styling */
+  svg text { fill: var(--text); font-family: var(--body); }
+  .t-title { font-family: var(--display); font-weight: 500; font-size: 16px; }
+  .t-big { font-family: var(--display); font-weight: 700; font-size: 20px; }
+  .t-name { font-weight: 600; font-size: 15px; }
+  .t-body { font-size: 13px; }
+  .t-muted { fill: var(--muted) !important; font-size: 12.5px; }
+  .t-mono { font-family: var(--mono) !important; font-size: 11.5px; letter-spacing: .04em; }
+  .t-zone { font-family: var(--mono) !important; font-size: 12px; font-weight: 600; letter-spacing: .16em; }
+  .zone-off { fill: rgba(63,208,201,.035); stroke: var(--teal); stroke-opacity: .55; stroke-width: 1.5; stroke-dasharray: 7 6; }
+  .zone-on { fill: rgba(131,110,249,.09); stroke: var(--violet); stroke-width: 1.5; }
+  .box { fill: var(--panel-2); stroke: var(--line); stroke-width: 1.2; }
+  .box-teal { fill: var(--panel-2); stroke: var(--teal); stroke-width: 1.5; }
+  .box-amber { fill: var(--panel-2); stroke: var(--amber); stroke-width: 1.5; }
+  .box-violet { fill: rgba(131,110,249,.12); stroke: var(--violet); stroke-width: 1.5; }
+  .box-green { fill: rgba(61,220,151,.12); stroke: var(--green); stroke-width: 2; }
+  .box-red { fill: rgba(255,90,118,.12); stroke: var(--red); stroke-width: 2; }
+  .inset { fill: var(--bg); stroke: var(--line); stroke-width: 1; }
+  .a { fill: none; stroke-width: 2.2; }
+  .a-teal { stroke: var(--teal); }
+  .a-amber { stroke: var(--amber); stroke-dasharray: 6 5; }
+  .a-violet { stroke: var(--violet); }
+  .a-green { stroke: var(--green); stroke-width: 3; }
+  .a-red { stroke: var(--red); stroke-width: 3; }
+  .a-thin { stroke-width: 1.6; }
+  .lbl-bg { fill: var(--panel); }
+  .c-teal { fill: var(--teal) !important; }
+  .c-amber { fill: var(--amber) !important; }
+  .c-violet { fill: var(--violet) !important; }
+  .c-green { fill: var(--green) !important; }
+  .c-red { fill: var(--red) !important; }
+
+  .flow { margin-top: 28px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; counter-reset: step; list-style: none; padding: 0; }
+  .flow li { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 16px; }
+  .flow li::before { counter-increment: step; content: counter(step, decimal-leading-zero); display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .flow b { display: block; font-weight: 600; margin-bottom: 2px; }
+  .flow span { color: var(--muted); font-size: 13px; }
+  .flow i { display: inline-block; font-style: normal; font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; padding: 2px 7px; border-radius: 999px; margin-bottom: 6px; }
+  .flow i.inf { color: var(--teal); background: rgba(63,208,201,.12); }
+  .flow i.ver { color: var(--amber); background: rgba(245,181,68,.12); }
+  .flow i.chain { color: var(--violet); background: rgba(131,110,249,.14); }
+  .flow .on { border-color: rgba(131,110,249,.6); background: rgba(131,110,249,.08); }
+  .note { color: var(--muted); font-size: 13px; margin-top: 16px; }
+</style>
+
+<div class="page">
+  <header>
+    <div>
+      <p class="eyebrow">Architecture · Monad Testnet</p>
+      <h1>Inference <span>Truth</span></h1>
+      <p class="tagline">Decentralized AI inference. The Inference Service sends each prompt to the model the user chose, then calls the Verification Service to re-check a sample on Machine 3. A Monad smart contract settles the result in MON: pay on PASS, slash on FAIL.</p>
+    </div>
+    <div class="legend" aria-label="Legend">
+      <span class="chip"><i class="sw off"></i>Off-chain compute</span>
+      <span class="chip"><i class="sw on"></i>On-chain · Monad</span>
+      <span class="chip"><i class="dot" style="background:var(--amber)"></i>Verification path</span>
+      <span class="chip"><i class="dot" style="background:var(--green)"></i>Reward</span>
+      <span class="chip"><i class="dot" style="background:var(--red)"></i>Slash</span>
+    </div>
+  </header>
+
+  <div class="diagram">
+    <svg viewBox="0 0 1320 965" role="img" aria-labelledby="dgm-title">
+      <title id="dgm-title">Inference Truth flow: User to Inference Service, which calls the chosen model machine and then the Verification Service, to PASS or FAIL to Monad smart contract for payment, reward or slashing</title>
+      <defs>
+        <marker id="m-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3FD0C9"/></marker>
+        <marker id="m-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#F5B544"/></marker>
+        <marker id="m-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#836EF9"/></marker>
+        <marker id="m-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9A94B8"/></marker>
+        <marker id="m-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3DDC97"/></marker>
+        <marker id="m-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#FF5A76"/></marker>
+        <linearGradient id="g-sim" x1="0" x2="1"><stop offset="0" stop-color="#3FD0C9"/><stop offset="1" stop-color="#F5B544"/></linearGradient>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <g id="machine"><rect x="0" y="0" width="28" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M-4 22 H32" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></g>
+      </defs>
+
+      <!-- ============ ZONES ============ -->
+      <rect class="zone-off" x="20" y="70" width="1280" height="490" rx="22"/>
+      <text class="t-zone c-teal" x="580" y="58">OFF-CHAIN</text>
+      <text class="t-muted" x="680" y="58">Inference Service + Verification Service</text>
+
+      <rect class="zone-on" x="20" y="600" width="1280" height="330" rx="22"/>
+      <text class="t-zone c-violet" x="432" y="590">ON-CHAIN · MONAD TESTNET</text>
+      <text class="t-muted" x="1290" y="952" text-anchor="end">Monad holds money and rules only. No LLM runs on-chain.</text>
+
+      <!-- ============ OFF-CHAIN ============ -->
+
+      <!-- User / AI Agent -->
+      <rect class="box-violet" x="50" y="150" width="190" height="195" rx="16"/>
+      <text class="t-title" x="68" y="182">User / AI Agent</text>
+      <circle cx="74" cy="208" r="4" class="c-teal"/><text class="t-body" x="86" y="212">Submits prompt</text>
+      <circle cx="74" cy="234" r="4" class="c-teal"/><text class="t-body" x="86" y="238">Picks model size</text>
+      <rect x="68" y="248" width="74" height="24" rx="6" fill="rgba(63,208,201,.22)" stroke="#3FD0C9" stroke-width="1.2"/>
+      <text class="t-mono c-teal" x="105" y="264" text-anchor="middle">1B</text>
+      <rect x="148" y="248" width="74" height="24" rx="6" fill="#0A0912" stroke="#2C2844"/>
+      <text class="t-mono t-muted" x="185" y="264" text-anchor="middle">2B</text>
+      <circle cx="74" cy="294" r="4" class="c-violet"/><text class="t-body" x="86" y="298">Pays in MON</text>
+      <circle cx="74" cy="320" r="4" class="c-teal"/><text class="t-body" x="86" y="324">Receives answer</text>
+
+      <!-- User <-> Inference Service -->
+      <path class="a a-teal" d="M240,198 H296" marker-end="url(#m-teal)"/>
+      <text class="t-mono t-muted" x="268" y="188" text-anchor="middle">prompt</text>
+      <text class="t-mono c-teal" x="268" y="216" text-anchor="middle">+ 1B</text>
+      <path class="a a-teal a-thin" d="M300,300 H244" marker-end="url(#m-teal)"/>
+      <text class="t-mono c-teal" x="270" y="318" text-anchor="middle">answer</text>
+
+      <!-- Inference Service -->
+      <rect class="box-teal" x="300" y="148" width="230" height="244" rx="16"/>
+      <text class="t-title" x="318" y="178">Inference Service</text>
+      <text class="t-mono t-muted" x="318" y="198">ENTRY POINT</text>
+      <text class="t-body" x="318" y="226"><tspan class="c-teal" font-weight="600">1</tspan>  Route by chosen model</text>
+      <rect x="318" y="236" width="194" height="24" rx="6" fill="rgba(63,208,201,.16)" stroke="#3FD0C9" stroke-width="1"/>
+      <text class="t-mono c-teal" x="330" y="252">1B → MACHINE 1</text>
+      <rect x="318" y="266" width="194" height="24" rx="6" fill="#0A0912" stroke="#2C2844"/>
+      <text class="t-mono t-muted" x="330" y="282">2B → MACHINE 2</text>
+      <text class="t-body" x="318" y="318"><tspan class="c-teal" font-weight="600">2</tspan>  Answer A → user</text>
+      <text class="t-body" x="318" y="344"><tspan class="c-amber" font-weight="600">3</tspan>  Call Verification Service</text>
+      <text class="t-body" x="318" y="370"><tspan class="c-violet" font-weight="600">4</tspan>  Record request on-chain</text>
+
+      <!-- Inference Service <-> Machines -->
+      <path class="a a-teal" d="M530,190 H611" marker-end="url(#m-teal)"/>
+      <text class="t-mono c-teal" x="570" y="182" text-anchor="middle">1B</text>
+      <path class="a a-teal a-thin" d="M615,222 H534" marker-end="url(#m-teal)"/>
+      <text class="t-mono c-teal" x="572" y="240" text-anchor="middle">answer A</text>
+      <path class="a a-thin" d="M530,300 H611" stroke="#9A94B8" stroke-dasharray="4 4" marker-end="url(#m-muted)"/>
+      <text class="t-mono t-muted" x="570" y="292" text-anchor="middle">2B</text>
+
+      <!-- Inference Service -> Verification Service -->
+      <path class="a a-amber" d="M415,148 V100 H1090 V106" marker-end="url(#m-amber)" style="stroke-dasharray:none"/>
+      <rect class="lbl-bg" x="600" y="90" width="250" height="19" rx="6"/>
+      <text class="t-mono c-amber" x="725" y="104" text-anchor="middle">verify(prompt, model, answer A)</text>
+
+      <!-- Machines (moved right) -->
+      <g transform="translate(300,0)">
+        <rect class="box" x="300" y="110" width="240" height="420" rx="18" fill-opacity=".5"/>
+        <text class="t-mono t-muted" x="316" y="134">MACHINES</text>
+        <text class="t-mono t-muted" x="524" y="134" text-anchor="end">2 serve · 1 checks</text>
+
+        <rect class="box-teal" x="315" y="148" width="210" height="100" rx="12"/>
+        <use href="#machine" x="333" y="166" style="color:var(--teal)"/>
+        <text class="t-name" x="376" y="178">Machine 1</text>
+        <text class="t-mono t-muted" x="376" y="196">LOCAL LLM</text>
+        <rect x="462" y="164" width="50" height="24" rx="6" fill="#0A0912" stroke="#3FD0C9" stroke-width="1.2"/>
+        <text class="t-mono" x="487" y="181" text-anchor="middle" font-weight="600">1B</text>
+        <rect x="331" y="210" width="178" height="26" rx="13" fill="rgba(63,208,201,.14)"/>
+        <text class="t-mono c-teal" x="420" y="227" text-anchor="middle">SERVES 1B REQUESTS</text>
+
+        <rect class="box" x="315" y="262" width="210" height="100" rx="12"/>
+        <use href="#machine" x="333" y="280" style="color:var(--muted)"/>
+        <text class="t-name" x="376" y="292">Machine 2</text>
+        <text class="t-mono t-muted" x="376" y="310">LOCAL LLM</text>
+        <rect x="462" y="278" width="50" height="24" rx="6" fill="#0A0912" stroke="#9A94B8" stroke-width="1.2"/>
+        <text class="t-mono" x="487" y="295" text-anchor="middle" font-weight="600">2B</text>
+        <rect x="331" y="324" width="178" height="26" rx="13" fill="rgba(154,148,184,.12)"/>
+        <text class="t-mono t-muted" x="420" y="341" text-anchor="middle">SERVES 2B REQUESTS</text>
+
+        <rect class="box-amber" x="315" y="376" width="210" height="100" rx="12"/>
+        <use href="#machine" x="333" y="394" style="color:var(--amber)"/>
+        <text class="t-name" x="376" y="406">Machine 3</text>
+        <text class="t-mono t-muted" x="376" y="424">LOCAL LLM</text>
+        <rect x="452" y="392" width="60" height="24" rx="6" fill="#0A0912" stroke="#F5B544" stroke-width="1.2"/>
+        <text class="t-mono" x="482" y="409" text-anchor="middle" font-weight="600">1B+2B</text>
+        <rect x="331" y="438" width="178" height="26" rx="13" fill="rgba(245,181,68,.14)"/>
+        <text class="t-mono c-amber" x="420" y="455" text-anchor="middle">VERIFIER · RUNS 1B</text>
+
+        <text class="t-muted" x="420" y="506" text-anchor="middle">Independent machines, local LLMs</text>
+      </g>
+
+      <!-- Verification Service <-> Machine 3 -->
+      <path class="a a-amber" d="M908,396 H829" marker-end="url(#m-amber)"/>
+      <text class="t-mono c-amber" x="868" y="386" text-anchor="middle">re-run</text>
+      <path class="a a-amber" d="M825,420 H906" marker-end="url(#m-amber)"/>
+      <text class="t-mono c-amber" x="866" y="440" text-anchor="middle">answer B</text>
+
+      <!-- Verification Service -->
+      <rect class="box-amber" x="910" y="110" width="360" height="330" rx="18"/>
+      <text class="t-title" x="930" y="144">Verification Service</text>
+      <text class="t-mono c-amber" x="1250" y="142" text-anchor="end">ON MACHINE 3</text>
+
+      <rect class="inset" x="930" y="160" width="320" height="36" rx="9"/>
+      <text class="t-body" x="944" y="183"><tspan class="c-amber" font-weight="600">1</tspan>  Random sample</text>
+      <text class="t-mono t-muted" x="1238" y="183" text-anchor="end">e.g. 1 in 10</text>
+
+      <rect class="inset" x="930" y="206" width="320" height="36" rx="9"/>
+      <text class="t-body" x="944" y="229"><tspan class="c-amber" font-weight="600">2</tspan>  Re-run on Machine 3, same model</text>
+
+      <rect x="930" y="256" width="146" height="28" rx="7" fill="rgba(63,208,201,.18)" stroke="#3FD0C9" stroke-width="1"/>
+      <text class="t-mono c-teal" x="1003" y="275" text-anchor="middle">ANSWER A</text>
+      <text class="t-body t-muted" x="1090" y="275" text-anchor="middle">vs</text>
+      <rect x="1104" y="256" width="146" height="28" rx="7" fill="rgba(245,181,68,.18)" stroke="#F5B544" stroke-width="1"/>
+      <text class="t-mono c-amber" x="1177" y="275" text-anchor="middle">ANSWER B</text>
+
+      <text class="t-body" x="930" y="320"><tspan class="c-amber" font-weight="600">3</tspan>  Semantic similarity</text>
+      <text class="t-mono" x="1250" y="320" text-anchor="end">0.91</text>
+      <rect x="930" y="332" width="320" height="10" rx="5" fill="#0A0912" stroke="#2C2844"/>
+      <rect x="930" y="332" width="291" height="10" rx="5" fill="url(#g-sim)"/>
+      <path d="M1202,326 V348" stroke="#EEEBFA" stroke-width="2" stroke-dasharray="3 2"/>
+      <text class="t-mono t-muted" x="1202" y="364" text-anchor="middle">threshold 0.85</text>
+      <text class="t-mono t-muted" x="930" y="400">≥ threshold → PASS   ·   below → FAIL</text>
+      <text class="t-mono t-muted" x="930" y="422">4  sends verdict tx</text>
+
+      <!-- Verification -> verdicts -->
+      <path class="a a-red" d="M995,440 V456" marker-end="url(#m-red)"/>
+      <path class="a a-green" d="M1185,440 V456" marker-end="url(#m-green)"/>
+
+      <rect class="box-red" x="910" y="460" width="170" height="74" rx="14"/>
+      <text class="t-big c-red" x="995" y="496" text-anchor="middle">FAIL ✗</text>
+      <text class="t-mono t-muted" x="995" y="518" text-anchor="middle">answers diverge</text>
+
+      <rect class="box-green" x="1100" y="460" width="170" height="74" rx="14"/>
+      <text class="t-big c-green" x="1185" y="496" text-anchor="middle">PASS ✓</text>
+      <text class="t-mono t-muted" x="1185" y="518" text-anchor="middle">answers match</text>
+
+      <!-- ============ CROSSING TO CHAIN ============ -->
+      <path class="a a-red" d="M995,534 V646" marker-end="url(#m-red)"/>
+      <path class="a a-green" d="M1185,534 V646" marker-end="url(#m-green)"/>
+      <rect class="lbl-bg" x="1035" y="566" width="110" height="22" rx="6"/>
+      <text class="t-mono" x="1090" y="581" text-anchor="middle">verdict tx</text>
+
+      <path class="a a-violet" d="M145,345 V646" marker-end="url(#m-violet)"/>
+      <text class="t-mono c-violet" x="156" y="470">pays MON</text>
+
+      <path class="a a-violet" d="M415,392 V646" marker-end="url(#m-violet)"/>
+      <rect class="lbl-bg" x="424" y="460" width="130" height="20" rx="6"/>
+      <text class="t-mono c-violet" x="430" y="474">recordRequest()</text>
+
+      <path class="a a-violet a-thin" d="M660,530 V646" marker-end="url(#m-violet)"/>
+      <path class="a a-violet a-thin" d="M720,530 V646" marker-end="url(#m-violet)"/>
+      <path class="a a-violet a-thin" d="M780,530 V646" marker-end="url(#m-violet)"/>
+      <rect class="lbl-bg" x="678" y="566" width="84" height="20" rx="6"/>
+      <text class="t-mono c-violet" x="720" y="580" text-anchor="middle">stake MON</text>
+
+      <!-- ============ ON-CHAIN ============ -->
+
+      <!-- Escrow -->
+      <rect class="box-violet" x="50" y="650" width="190" height="230" rx="16"/>
+      <text class="t-title" x="68" y="682">MON Payments</text>
+      <text class="t-mono t-muted" x="68" y="702">ESCROW</text>
+      <text class="t-body" x="68" y="738">User deposits MON</text>
+      <text class="t-body" x="68" y="762">Price by model size</text>
+      <text class="t-body" x="68" y="786">Released on PASS</text>
+      <text class="t-body" x="68" y="810">Refunded on FAIL</text>
+      <rect x="68" y="832" width="154" height="28" rx="7" fill="#0A0912" stroke="#2C2844"/>
+      <text class="t-mono t-muted" x="145" y="851" text-anchor="middle">+ gas paid in MON</text>
+
+      <!-- Contract card -->
+      <rect class="box-violet" x="300" y="650" width="230" height="140" rx="16" filter="url(#glow)"/>
+      <text class="t-title" x="318" y="682">InferenceTruth.sol</text>
+      <text class="t-mono t-muted" x="318" y="702">MONAD SMART CONTRACT</text>
+      <text class="t-mono" x="318" y="732">deposit() · stake()</text>
+      <text class="t-mono" x="318" y="754">recordRequest()</text>
+      <text class="t-mono" x="318" y="776">submitVerdict() · settle()</text>
+
+      <!-- Staking (moved right) -->
+      <g transform="translate(300,0)">
+        <rect class="box-violet" x="300" y="650" width="240" height="230" rx="16"/>
+        <text class="t-title" x="318" y="682">Provider Staking</text>
+        <text class="t-mono t-muted" x="318" y="702">COLLATERAL BEFORE SERVING</text>
+        <rect class="inset" x="318" y="718" width="204" height="36" rx="9"/>
+        <text class="t-body" x="332" y="741">Machine 1</text><text class="t-mono c-violet" x="508" y="741" text-anchor="end">1B · STAKED</text>
+        <rect class="inset" x="318" y="762" width="204" height="36" rx="9"/>
+        <text class="t-body" x="332" y="785">Machine 2</text><text class="t-mono c-violet" x="508" y="785" text-anchor="end">2B · STAKED</text>
+        <rect class="inset" x="318" y="806" width="204" height="36" rx="9"/>
+        <text class="t-body" x="332" y="829">Machine 3</text><text class="t-mono c-violet" x="508" y="829" text-anchor="end">1B+2B · STAKED</text>
+        <text class="t-muted" x="420" y="866" text-anchor="middle">Locked while serving</text>
+      </g>
+
+      <!-- Slash -> staking -->
+      <path class="a a-red" d="M908,780 H846" marker-end="url(#m-red)"/>
+      <text class="t-mono c-red" x="877" y="770" text-anchor="middle">cut</text>
+
+      <!-- Slashing -->
+      <rect class="box-red" x="910" y="650" width="170" height="230" rx="16"/>
+      <text class="t-big c-red" x="928" y="686">Slash</text>
+      <text class="t-mono t-muted" x="928" y="706">ON FAIL</text>
+      <text class="t-body" x="928" y="742">Provider stake</text>
+      <text class="t-body" x="928" y="760">slashed</text>
+      <text class="t-body" x="928" y="790">User refunded</text>
+      <rect x="928" y="836" width="134" height="26" rx="13" fill="rgba(255,90,118,.18)"/>
+      <text class="t-mono c-red" x="995" y="853" text-anchor="middle">AUTOMATIC</text>
+
+      <!-- Reward -->
+      <rect class="box-green" x="1100" y="650" width="170" height="230" rx="16"/>
+      <text class="t-big c-green" x="1118" y="686">Reward</text>
+      <text class="t-mono t-muted" x="1118" y="706">ON PASS</text>
+      <text class="t-body" x="1118" y="742">Provider paid</text>
+      <text class="t-body" x="1118" y="760">in MON</text>
+      <text class="t-body" x="1118" y="790">Verifier earns</text>
+      <text class="t-body" x="1118" y="808">a reward</text>
+      <rect x="1118" y="836" width="134" height="26" rx="13" fill="rgba(61,220,151,.18)"/>
+      <text class="t-mono c-green" x="1185" y="853" text-anchor="middle">+ MON</text>
+
+      <!-- Escrow releases MON to reward -->
+      <path class="a a-violet a-thin" d="M145,880 V910 H1185 V884" marker-end="url(#m-violet)"/>
+      <rect class="lbl-bg" x="620" y="899" width="200" height="22" rx="6"/>
+      <text class="t-mono c-violet" x="720" y="914" text-anchor="middle">escrow releases MON</text>
+    </svg>
+  </div>
+
+  <ol class="flow">
+    <li><i class="inf">INFERENCE</i><b>Prompt + pay</b><span>User or AI agent sends a prompt with 1B or 2B to the Inference Service and locks MON.</span></li>
+    <li><i class="inf">INFERENCE</i><b>Route</b><span>Inference Service calls Machine 1 for 1B or Machine 2 for 2B.</span></li>
+    <li><i class="inf">INFERENCE</i><b>Answer</b><span>Answer A goes back to the user and the request is recorded on-chain.</span></li>
+    <li><i class="ver">VERIFICATION</i><b>Verify</b><span>Inference Service calls the Verification Service, which samples and re-runs on Machine 3 for Answer B.</span></li>
+    <li><i class="ver">VERIFICATION</i><b>Compare</b><span>Semantic similarity of A and B decides PASS or FAIL.</span></li>
+    <li class="on"><i class="chain">MONAD</i><b>Settle on Monad</b><span>Verification Service sends the verdict tx to InferenceTruth.sol.</span></li>
+    <li class="on"><i class="chain">MONAD</i><b>Pay or slash</b><span>PASS pays provider + verifier. FAIL slashes stake.</span></li>
+  </ol>
+  <p class="note">Monad never runs the LLM. It holds the MON, the stakes and the rules, and every contract call pays gas in MON. Similarity score and threshold shown are examples.</p>
+</div>
