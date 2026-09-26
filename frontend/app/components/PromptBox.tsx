@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Model } from "@/lib/models";
 import { MODELS } from "@/lib/models";
+import { formatMon } from "@/lib/api";
 
 interface PromptBoxProps {
   input: string;
@@ -12,6 +13,7 @@ interface PromptBoxProps {
   model: Model;
   setModel: (m: Model) => void;
   centered?: boolean;
+  prices?: Record<string, string>;
 }
 
 export default function PromptBox({
@@ -22,6 +24,7 @@ export default function PromptBox({
   model,
   setModel,
   centered,
+  prices = {},
 }: PromptBoxProps) {
   const [showModelMenu, setShowModelMenu] = useState(false);
 
@@ -74,6 +77,7 @@ export default function PromptBox({
                   }`}
                 >
                   {m.name}
+                  {prices[m.id] && <span className="float-right text-gray-500">{formatMon(prices[m.id])} MON</span>}
                 </button>
               ))}
             </div>

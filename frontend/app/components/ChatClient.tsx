@@ -1,12 +1,24 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import PromptBox from "./PromptBox";
+import WalletBar from "./WalletBar";
 import { MODELS, type Model } from "@/lib/models";
+import { getAccount, getModels, getVerdict, infer, requestMessage, formatMon, type Account, type Verdict } from "@/lib/api";
+import { signMessage, explorerTx, onAccountsChanged, isAllowed, notAllowedMessage } from "@/lib/wallet";
 
 interface Message {
   role: "user" | "assistant";
   text: string;
+  error?: boolean;
+  meta?: {
+    model: string;
+    provider: string;
+    charged?: string;
+    txHash?: string | null;
+    requestId?: string;
+    verdict?: Verdict | null;
+  };
 }
 
 export default function ChatClient() {
@@ -14,7 +26,60 @@ export default function ChatClient() {
   const [input, setInput] = useState("");
   const [model, setModel] = useState<Model>(MODELS[0]);
   const [loading, setLoading] = useState(false);
+  const [address, setAddress] = useState<string | null>(null);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [prices, setPrices] = useState<Record<string, string>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const refresh = useCallback(async () => {
+    if (address) setAccount(await getAccount(address));
+  }, [address]);
+
+  useEffect(() => {
+    getModels()
+      .then((ms) => setPrices(Object.fromEntries(ms.map((m) => [m.model, m.price_wei ?? ""]))))
+      .catch(() => setPrices({}));
+  }, []);
+
+  useEffect(() => {
+    refresh().catch(() => setAccount(null));
+  }, [refresh]);
+
+  // If MetaMask switches to a different account, disconnect unless it is the allowed user wallet.
+  useEffect(
+    () =>
+      onAccountsChanged((next) => {
+        if (isAllowed(next)) {
+          setAddress(next);
+          return;
+        }
+        setAddress(null);
+        setAccount(null);
+        if (next) {
+          setMessages((prev) => [...prev, { role: "assistant", text: notAllowedMessage(next), error: true }]);
+        }
+      }),
+    [],
+  );
+
+  // Poll the Verification Service until the request's verdict is final.
+  const watchVerdict = useCallback(
+    async (requestId: string) => {
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const verdict = await getVerdict(requestId).catch(() => null);
+        if (!verdict) continue;
+        setMessages((prev) =>
+          prev.map((m) => (m.meta?.requestId === requestId ? { ...m, meta: { ...m.meta, verdict } } : m)),
+        );
+        if (verdict.status !== "pending") {
+          await refresh();
+          return;
+        }
+      }
+    },
+    [refresh],
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -22,17 +87,36 @@ export default function ChatClient() {
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    const userMsg: Message = { role: "user", text: input };
-    setMessages((prev) => [...prev, userMsg]);
+    const prompt = input;
+    setMessages((prev) => [...prev, { role: "user", text: prompt }]);
     setInput("");
     setLoading(true);
 
     try {
-      await new Promise((r) => setTimeout(r, 800));
+      if (!address) throw new Error("Connect your wallet first (top right).");
+      // One nonce per request: the signature authorizes exactly one paid prompt.
+      const nonce = Date.now();
+      const signature = await signMessage(address, requestMessage(model.id, nonce, prompt));
+      const res = await infer({ model: model.id, prompt, nonce, signature });
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", text: `(${model.name} se reply yahan aayega)` },
+        {
+          role: "assistant",
+          text: res.answer,
+          meta: {
+            model: model.name,
+            provider: res.provider,
+            charged: prices[model.id],
+            txHash: res.tx_hash,
+            requestId: res.request_id,
+            verdict: null,
+          },
+        },
       ]);
+      await refresh();
+      void watchVerdict(res.request_id);
+    } catch (e) {
+      setMessages((prev) => [...prev, { role: "assistant", text: (e as Error).message, error: true }]);
     } finally {
       setLoading(false);
     }
@@ -70,8 +154,11 @@ export default function ChatClient() {
       {/* Main */}
       <main className="flex-1 flex flex-col">
         {/* Top bar - ab sirf avatar/branding, model selector yahan se hata diya */}
-        <header className="flex items-center justify-end px-4 py-3 border-b border-white/10">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600" />
+        <header className="flex items-center justify-between gap-4 px-4 py-3 border-b border-white/10">
+          <div className="text-lg font-semibold tracking-tight shrink-0">
+            Infer<span className="text-orange-500">MON</span>
+          </div>
+          <WalletBar address={address} setAddress={setAddress} account={account} refresh={refresh} />
         </header>
 
         {/* Messages / empty state */}
@@ -88,6 +175,7 @@ export default function ChatClient() {
                 onKeyDown={handleKeyDown}
                 model={model}
                 setModel={setModel}
+                prices={prices}
                 centered
               />
             </div>
@@ -99,20 +187,34 @@ export default function ChatClient() {
                   className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed ${
+                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap ${
                       m.role === "user"
                         ? "bg-orange-600/90 text-white"
-                        : "bg-[#2a2a2a] text-gray-100"
+                        : m.error
+                          ? "bg-red-950/60 border border-red-500/30 text-red-200"
+                          : "bg-[#2a2a2a] text-gray-100"
                     }`}
                   >
                     {m.text}
+                    {m.meta && (
+                      <div className="mt-2 pt-2 border-t border-white/10 text-xs text-gray-400 flex flex-wrap gap-x-3">
+                        <span>{m.meta.model} · {m.meta.provider}</span>
+                        {m.meta.charged && <span>paid {formatMon(m.meta.charged)} MON</span>}
+                        {m.meta.txHash && (
+                          <a href={explorerTx(m.meta.txHash)} target="_blank" rel="noreferrer" className="underline hover:text-gray-200">
+                            view on-chain
+                          </a>
+                        )}
+                        <VerdictBadge verdict={m.meta.verdict} provider={m.meta.provider} />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
               {loading && (
                 <div className="flex justify-start">
                   <div className="bg-[#2a2a2a] rounded-2xl px-4 py-2.5 text-gray-400 text-sm">
-                    Thinking…
+                    Sign in your wallet, then {model.name} answers and the payment is recorded on Monad…
                   </div>
                 </div>
               )}
@@ -131,10 +233,27 @@ export default function ChatClient() {
               onKeyDown={handleKeyDown}
               model={model}
               setModel={setModel}
+              prices={prices}
             />
           </div>
         )}
       </main>
     </div>
   );
+}
+function VerdictBadge({ verdict, provider }: { verdict?: Verdict | null; provider: string }) {
+  if (!verdict || verdict.status === "pending") return <span className="text-yellow-400">verifying…</span>;
+  if (verdict.status === "not_sampled") return <span>not sampled (paid after 10 min)</span>;
+  if (verdict.status === "done") {
+    const text = verdict.passed ? `✓ verified · ${provider} paid` : "✗ failed · refunded, provider slashed";
+    const color = verdict.passed ? "text-green-400" : "text-red-400";
+    return verdict.tx_hash ? (
+      <a href={explorerTx(verdict.tx_hash)} target="_blank" rel="noreferrer" className={`underline ${color}`}>
+        {text}
+      </a>
+    ) : (
+      <span className={color}>{text}</span>
+    );
+  }
+  return <span className="text-gray-500" title={verdict.reason}>verification {verdict.status}</span>;
 }
