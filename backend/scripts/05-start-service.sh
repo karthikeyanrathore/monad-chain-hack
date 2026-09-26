@@ -16,6 +16,6 @@ fi
 cd "$ROOT/inference-service"
 RPC_URL="$RPC" CONTRACT_ADDRESS="$CONTRACT" PROVIDER_1B_ADDRESS="$MACHINE1" MACHINE_1B_URL="$MACHINE_1B_URL" \
 MACHINE_3B_URL="$MACHINE_3B_URL" MODEL_3B="$MODEL_3B" PROVIDER_3B_ADDRESS="$MACHINE2" \
-VERIFIER_URL="${VERIFIER_URL:-http://localhost:9000}" \
+VERIFIER_URL="${VERIFIER_URL:-http://localhost:9000}" VERIFIER_MACHINE_URL="${VERIFY_1B_URL:-}" \
 SERVICE_PRIVATE_KEY="$(cast wallet decrypt-keystore deployer | awk '{print $NF}')" \
 exec .venv/bin/uvicorn app:app --port 8000

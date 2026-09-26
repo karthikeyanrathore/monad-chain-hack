@@ -71,6 +71,8 @@ export const depositTx = (address: string, amount: string) =>
   call<UnsignedTx>("/tx/deposit", { method: "POST", body: JSON.stringify({ address, amount }) });
 export const withdrawTx = (address: string, amount: string) =>
   call<UnsignedTx>("/tx/withdraw", { method: "POST", body: JSON.stringify({ address, amount }) });
+/** Which machines are reachable: { "machine-1": true, "machine-2": false, "machine-3": true } */
+export const getMachines = () => call<Record<string, boolean>>("/machines");
 export const getVerifierHealth = () => call<VerifierHealth>("/health", undefined, VERIFIER);
 export const getVerdict = (requestId: string) => call<Verdict>(`/verdicts/${requestId}`, undefined, VERIFIER);
 export const infer = (body: { model: string; prompt: string; nonce: number; signature: string }) =>

@@ -36,6 +36,8 @@ MACHINES = {
     },
 }
 VERIFIER_URL = os.getenv("VERIFIER_URL")
+# Machine 3 (the verifier's Ollama), only pinged for the dashboard's status display.
+VERIFIER_MACHINE_URL = os.getenv("VERIFIER_MACHINE_URL")
 TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "120"))
 
 # On-chain mode is on when a contract address is configured.
@@ -131,6 +133,14 @@ async def machine_online(url: str | None) -> bool:
             return (await client.get(f"{url}/api/version")).status_code == 200
     except httpx.HTTPError:
         return False
+
+
+@app.get("/machines")
+async def machines():
+    """Which machines are reachable right now (for the dashboard)."""
+    urls = {"machine-1": MACHINES["1B"]["url"], "machine-2": MACHINES["3B"]["url"], "machine-3": VERIFIER_MACHINE_URL}
+    online = await asyncio.gather(*(machine_online(u) for u in urls.values()))
+    return dict(zip(urls, online))
 
 
 @app.get("/models")

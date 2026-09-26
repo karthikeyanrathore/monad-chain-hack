@@ -4,7 +4,8 @@ import { formatMon, type ModelInfo, type VerifierHealth } from "@/lib/api";
 
 interface SidebarProps {
   models: ModelInfo[];
-  verifier: VerifierHealth | null;
+  machines: Record<string, boolean> | null; // null = not loaded yet
+  verifier: VerifierHealth | null | "down"; // "down" = Verification Service unreachable
   onNewChat: () => void;
 }
 
@@ -18,13 +19,14 @@ function StatusDot({ up }: { up: boolean | undefined }) {
   );
 }
 
-function MachineRow({ name, role, up }: { name: string; role: string; up: boolean | undefined }) {
+function MachineRow({ name, role, up, note }: { name: string; role: string; up: boolean | undefined; note?: string }) {
   return (
     <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 bg-white/[0.02] border border-line">
       <StatusDot up={up} />
       <div className="min-w-0 flex-1">
         <div className="text-sm text-ink">{name}</div>
         <div className="text-xs text-muted truncate">{role}</div>
+        {note && <div className="text-[11px] text-warn truncate">{note}</div>}
       </div>
       <span className={`text-[11px] font-mono ${up ? "text-ok" : up === false ? "text-bad" : "text-muted"}`}>
         {up === undefined ? "…" : up ? "online" : "offline"}
@@ -41,7 +43,7 @@ const STEPS = [
   ["Settle", "Match: the machine is paid. Mismatch: you're refunded and it's slashed."],
 ];
 
-export default function Sidebar({ models, verifier, onNewChat }: SidebarProps) {
+export default function Sidebar({ models, machines, verifier, onNewChat }: SidebarProps) {
   const byModel = Object.fromEntries(models.map((m) => [m.model, m]));
   const price = (id: string) => (byModel[id]?.price_wei ? ` · ${formatMon(byModel[id].price_wei)} MON` : "");
 
@@ -69,9 +71,14 @@ export default function Sidebar({ models, verifier, onNewChat }: SidebarProps) {
           </span>
         </div>
         <div className="flex flex-col gap-2">
-          <MachineRow name="Machine 1" role={`Provider · llama 1B${price("1B")}`} up={byModel["1B"]?.online} />
-          <MachineRow name="Machine 2" role={`Provider · llama 3B${price("3B")}`} up={byModel["3B"]?.online} />
-          <MachineRow name="Machine 3" role="Verifier · re-runs answers" up={verifier ? verifier.verifier_machine_online : undefined} />
+          <MachineRow name="Machine 1" role={`Provider · llama 1B${price("1B")}`} up={machines?.["machine-1"]} />
+          <MachineRow name="Machine 2" role={`Provider · llama 3B${price("3B")}`} up={machines?.["machine-2"]} />
+          <MachineRow
+            name="Machine 3"
+            role="Verifier · llama 1B + 3B"
+            up={machines?.["machine-3"]}
+            note={verifier === "down" ? "Verification service offline: answers won't be checked" : undefined}
+          />
         </div>
       </section>
 

@@ -9,6 +9,7 @@ import { MODELS, type Model } from "@/lib/models";
 import {
   getAccount,
   getModels,
+  getMachines,
   getVerdict,
   getVerifierHealth,
   infer,
@@ -41,7 +42,8 @@ export default function ChatClient() {
   const [address, setAddress] = useState<string | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [models, setModels] = useState<ModelInfo[]>([]);
-  const [verifier, setVerifier] = useState<VerifierHealth | null>(null);
+  const [machines, setMachines] = useState<Record<string, boolean> | null>(null);
+  const [verifier, setVerifier] = useState<VerifierHealth | null | "down">(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const prices = Object.fromEntries(models.map((m) => [m.model, m.price_wei ?? ""]));
@@ -54,7 +56,8 @@ export default function ChatClient() {
   useEffect(() => {
     const load = () => {
       getModels().then(setModels).catch(() => setModels([]));
-      getVerifierHealth().then(setVerifier).catch(() => setVerifier(null));
+      getMachines().then(setMachines).catch(() => setMachines({}));
+      getVerifierHealth().then(setVerifier).catch(() => setVerifier("down"));
     };
     load();
     const t = setInterval(load, 15_000);
@@ -167,7 +170,7 @@ export default function ChatClient() {
 
   return (
     <div className="flex h-screen text-ink">
-      <Sidebar models={models} verifier={verifier} onNewChat={() => setMessages([])} />
+      <Sidebar models={models} machines={machines} verifier={verifier} onNewChat={() => setMessages([])} />
 
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-4 border-b border-line bg-bg/60 px-5 py-3 backdrop-blur">

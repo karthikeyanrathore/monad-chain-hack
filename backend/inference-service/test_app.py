@@ -190,6 +190,15 @@ def test_cors_allows_the_dashboard(client):
     assert r.status_code == 200 and r.headers["access-control-allow-origin"] in ("*", "https://infermon.vercel.app")
 
 
+def test_machines_reports_all_three(client, monkeypatch):
+    async def up(url):
+        return url in ("https://machine1.ngrok.app", "https://machine3.ngrok.app")
+
+    monkeypatch.setattr(service, "machine_online", up)
+    monkeypatch.setattr(service, "VERIFIER_MACHINE_URL", "https://machine3.ngrok.app")
+    assert client.get("/machines").json() == {"machine-1": True, "machine-2": False, "machine-3": True}
+
+
 def test_models_reports_machine_online(client, monkeypatch):
     async def up(url):
         return url == "https://machine1.ngrok.app"
