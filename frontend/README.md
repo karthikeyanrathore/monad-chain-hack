@@ -12,9 +12,9 @@ Requests to `/backend/*` and `/verifier/*` are proxied to them (override with `B
 
 ## Use
 1. **Connect wallet** (top right). It switches to or adds Monad testnet (chain 10143).
-   - **Only the wallet `0x4EcbC794DdCF9544d1626dec2FDCE89Cc8E4d893` can connect.** Other MetaMask accounts are refused, and switching to one disconnects.
-   - To add it to MetaMask: `cast wallet decrypt-keystore user`, then MetaMask → Add account → Import account.
-   - Change the allowed address with `NEXT_PUBLIC_USER_ADDRESS` in `.env.local`, or set it empty to allow any wallet.
+   - **Any wallet can connect.** Each user has their own deposit and signs their own prompts, so nobody can spend anyone else's MON.
+   - Switching accounts in MetaMask switches the dashboard to that account's deposit.
+   - To lock the app to one address (private demo), set `NEXT_PUBLIC_USER_ADDRESS` in `.env.local`, or run `LOCK_TO_ADDRESS=0x… ./deploy-frontend.sh`.
 2. **Deposit:** enter an amount and click Deposit. The backend builds the transaction, and your wallet signs and sends it.
 3. **Chat:** pick `llama 1B` or `llama 3B`, then send.
    - Your wallet asks you to sign the request (free, no gas).

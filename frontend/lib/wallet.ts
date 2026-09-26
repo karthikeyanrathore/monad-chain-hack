@@ -26,18 +26,17 @@ export const MONAD_TESTNET = {
 export const explorerTx = (hash: string) => `${MONAD_TESTNET.blockExplorerUrls[0]}/tx/${hash}`;
 
 /**
- * The only wallet address the app accepts (the `user` wallet from backend/scripts/wallets.env).
- * Set NEXT_PUBLIC_USER_ADDRESS to change it, or to an empty string to accept any address.
+ * Any wallet can connect by default: each user signs their own prompts and pays from their own deposit.
+ * Set NEXT_PUBLIC_USER_ADDRESS to lock the app to a single address (e.g. for a private demo).
  */
-export const USER_ADDRESS = process.env.NEXT_PUBLIC_USER_ADDRESS ?? "0x4EcbC794DdCF9544d1626dec2FDCE89Cc8E4d893";
+export const USER_ADDRESS = process.env.NEXT_PUBLIC_USER_ADDRESS ?? "";
 const ALLOWED_ADDRESS = USER_ADDRESS.toLowerCase();
 
 export const isAllowed = (address: string | null): address is string =>
   !!address && (!ALLOWED_ADDRESS || address.toLowerCase() === ALLOWED_ADDRESS);
 
 export const notAllowedMessage = (address: string) =>
-  `MetaMask is on ${address.slice(0, 6)}…${address.slice(-4)}. Switch MetaMask to the user wallet ` +
-  `${USER_ADDRESS} (import it with: cast wallet decrypt-keystore user).`;
+  `MetaMask is on ${address.slice(0, 6)}…${address.slice(-4)}. This app only accepts ${USER_ADDRESS}.`;
 
 function eth(): Eip1193 {
   if (typeof window === "undefined" || !window.ethereum) {

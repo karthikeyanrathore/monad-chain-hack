@@ -13,4 +13,4 @@ cd "$ROOT/../frontend"
 npx --yes vercel deploy --prod --yes \
   --build-env NEXT_PUBLIC_BACKEND_URL="$NEXT_PUBLIC_BACKEND_URL" \
   --build-env NEXT_PUBLIC_VERIFIER_URL="$NEXT_PUBLIC_VERIFIER_URL" \
-  --build-env NEXT_PUBLIC_USER_ADDRESS="$ME"
+  --build-env NEXT_PUBLIC_USER_ADDRESS="${LOCK_TO_ADDRESS:-}"   # any wallet; set LOCK_TO_ADDRESS to restrict
