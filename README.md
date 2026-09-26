@@ -1,4 +1,4 @@
-# Trustless AI Inference on Monad
+# InferMON
 
 **Inference Truth** is decentralized AI inference on Monad:
 - Users pay in MON and pick a model (1B or 3B).
