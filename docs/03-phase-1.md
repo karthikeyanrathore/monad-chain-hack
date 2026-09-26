@@ -6,14 +6,14 @@ Phase 1 is only the smart contract, with no frontend or LLMs yet. It's the on-ch
 | Role | Who | Model |
 |---|---|---|
 | Provider | Machine 1 | 1B |
-| Provider | Machine 2 | 2B |
-| Verifier | Machine 3 | 1B + 2B |
+| Provider | Machine 2 | 3B |
+| Verifier | Machine 3 | 1B + 3B |
 | Inference Service | Inference Service key | routes requests to the chosen model, calls `recordRequest`, then calls the Verification Service |
 | User | Wallet | pays in MON |
 
 ## Contract functions
 **Setup (admin)**
-- `addModel(modelId, price)`: registers `1B` and `2B` with their prices in MON.
+- `addModel(modelId, price)`: registers `1B` and `3B` with their prices in MON.
 
 **Machines**
 - `stake(modelId, role)` is payable. A machine locks MON as collateral and registers as provider or verifier.

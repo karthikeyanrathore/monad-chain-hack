@@ -26,11 +26,11 @@ MACHINES = {
         "model": os.getenv("MODEL_1B", "llama3.2:1b"),
         "address": os.getenv("PROVIDER_1B_ADDRESS"),
     },
-    "2B": {
+    "3B": {
         "provider": "machine-2",
-        "url": os.getenv("MACHINE_2B_URL"),
-        "model": os.getenv("MODEL_2B"),
-        "address": os.getenv("PROVIDER_2B_ADDRESS"),
+        "url": os.getenv("MACHINE_3B_URL"),
+        "model": os.getenv("MODEL_3B", "llama3.2:3b"),
+        "address": os.getenv("PROVIDER_3B_ADDRESS"),
     },
 }
 VERIFIER_URL = os.getenv("VERIFIER_URL")
@@ -47,7 +47,7 @@ app = FastAPI(title="Inference Truth · Inference Service")
 
 
 class InferRequest(BaseModel):
-    model: Literal["1B", "2B"]
+    model: Literal["1B", "3B"]
     prompt: str = Field(min_length=1)
     nonce: int | None = Field(default=None, ge=0)
     signature: str | None = None
@@ -87,6 +87,12 @@ async def send_to_verifier(payload: dict) -> None:
             r.raise_for_status()
     except httpx.HTTPError as e:
         log.warning("verification call failed for %s: %s", payload["request_id"], e)
+
+
+def machine_down(size: str) -> HTTPException:
+    """User-facing message when the machine serving a model can't answer."""
+    name = MACHINES[size]["provider"].replace("machine-", "Machine ")
+    return HTTPException(502, f"{name} running the llama {size} model is not up right now. Try again later or pick another model.")
 
 
 def require_chain():
@@ -144,7 +150,8 @@ async def withdraw_tx(req: AmountRequest):
 async def infer(req: InferRequest, background_tasks: BackgroundTasks):
     machine = MACHINES[req.model]
     if not (machine["url"] and machine["model"]):
-        raise HTTPException(503, f"{req.model} model is not configured")
+        log.warning("%s model has no machine configured", req.model)
+        raise machine_down(req.model)
 
     user = None
     if chain:
@@ -167,7 +174,8 @@ async def infer(req: InferRequest, background_tasks: BackgroundTasks):
     try:
         answer = await generate(machine["url"], machine["model"], req.prompt)
     except httpx.HTTPError as e:
-        raise HTTPException(502, f"{machine['provider']} failed: {e}")
+        log.warning("%s failed for %s: %s", machine["provider"], req.model, e)
+        raise machine_down(req.model)
 
     tx_hash = None
     if chain:

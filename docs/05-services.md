@@ -3,10 +3,10 @@
 The **Inference Service** is the entry point. It calls the model the user chose, then calls the **Verification Service** itself. The Verification Service re-checks a random sample and settles the verdict on Monad.
 
 ```
-User ──prompt + model (1B/2B)──▶ INFERENCE SERVICE
+User ──prompt + model (1B/3B)──▶ INFERENCE SERVICE
                                    │ 1. route by chosen model
                                    │      1B ──▶ Machine 1 (1B)
-                                   │      2B ──▶ Machine 2 (2B)
+                                   │      3B ──▶ Machine 2 (3B)
                                    │ 2. Answer A ──▶ user
                                    │ 3. recordRequest(requestId, answerHash) ──▶ InferenceTruth.sol
                                    │ 4. POST /verify ─────────┐
@@ -28,11 +28,11 @@ User ──prompt + model (1B/2B)──▶ INFERENCE SERVICE
 | Calls | Machine 1 or Machine 2 (`/generate`), `InferenceTruth.sol`, Verification Service (`/verify`) |
 
 **`POST /infer`**
-- Request: `{ user, model: "1B" | "2B", prompt, signature }`
+- Request: `{ user, model: "1B" | "3B", prompt, signature }`
 - Response: `{ requestId, answer, provider }`
 - Steps:
   1. Verify the user's signature and check their on-chain balance against the model price.
-  2. **Route by the chosen model:** `1B → Machine 1`, `2B → Machine 2`.
+  2. **Route by the chosen model:** `1B → Machine 1`, `3B → Machine 2`.
   3. Call the machine's Ollama API with fixed parameters (`temperature 0, seed 42, num_predict 256`) and get **Answer A**.
   4. Call `recordRequest(requestId, user, provider, modelId, keccak256(answerA))` on-chain. This locks the price in escrow.
   5. Return Answer A to the user.
@@ -44,10 +44,10 @@ User ──prompt + model (1B/2B)──▶ INFERENCE SERVICE
 
 | | |
 |---|---|
-| Runs on | Machine 3, which holds both the 1B and 2B models |
+| Runs on | Machine 3, which holds both the 1B and 3B models |
 | Wallet | Verifier key, the only address allowed to call `submitVerdict` |
 | Called by | Inference Service (`/verify`) |
-| Calls | Its local 1B/2B model, `InferenceTruth.sol` |
+| Calls | Its local 1B/3B model, `InferenceTruth.sol` |
 
 **`POST /verify`**
 - Request: `{ requestId, model, prompt, params, answerA, provider }`
@@ -68,7 +68,7 @@ User ──prompt + model (1B/2B)──▶ INFERENCE SERVICE
 ## 3. Machines (Ollama)
 Each machine runs **Ollama**, and the services call its API (`POST /api/generate`) directly, so no extra node service is needed.
 - **Machine 1:** this laptop, running `llama3.2:1b`.
-- **Machine 2:** external, running the 2B model.
+- **Machine 2:** external, running the 3B model.
 - **Machine 3:** external, running both models plus the Verification Service.
 
 The external machines must start Ollama with `OLLAMA_HOST=0.0.0.0` so they accept network connections.
@@ -80,7 +80,7 @@ The external machines must start Ollama with `OLLAMA_HOST=0.0.0.0` so they accep
 
 ## Build order
 1. Ollama on all three machines. **Check:** the same prompt at temperature 0 gives near-identical text on the provider and on Machine 3.
-2. Inference Service `/infer` with routing and `recordRequest`. **Check:** a 1B prompt is answered by Machine 1, a 2B prompt by Machine 2, and a `RequestRecorded` event appears on the explorer.
+2. Inference Service `/infer` with routing and `recordRequest`. **Check:** a 1B prompt is answered by Machine 1, a 3B prompt by Machine 2, and a `RequestRecorded` event appears on the explorer.
 3. Verification Service `/verify` with `submitVerdict`, called from the Inference Service. **Check:**
    - An honest request leads to a PASS transaction.
    - When Machine 2 runs in cheat mode, a request leads to a FAIL transaction and a `Slashed` event.
@@ -90,5 +90,5 @@ The external machines must start Ollama with `OLLAMA_HOST=0.0.0.0` so they accep
   - Endpoints: `POST /infer`, `GET /models`, `GET /health`.
   - Calls the Verification Service's `/verify` when `VERIFIER_URL` is set.
   - On-chain mode: user deposits and withdrawals through unsigned transactions (`/tx/deposit`, `/tx/withdraw`), `/account/{address}`, signed `/infer`, and `recordRequest` after each answer.
-- **Contract:** `InferenceTruth.sol` in [`backend/contracts/`](../backend/contracts/README.md), with 18 Foundry tests. Deployed to Monad testnet at `0x6b96259Ee3F4273E11E697b84ea8513ea30283e6`.
-- **Verification Service:** not started.
+- **Contract:** `InferenceTruth.sol` in [`backend/contracts/`](../backend/contracts/README.md), with 18 Foundry tests. Deployed to Monad testnet at `0x144e60D7084aBc1253A60aA6451cA2c48e7fc024` (1B and 3B).
+- **Verification Service:** built in [`backend/verification-service/`](../backend/verification-service/README.md). Re-runs on Machine 3; PASS pays the provider wallet directly.

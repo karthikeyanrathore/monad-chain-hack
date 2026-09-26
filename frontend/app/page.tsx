@@ -3,8 +3,8 @@
 import ChatClient from "./components/ChatClient";
 
 export const metadata = {
-  title: "My AI Chat",
-  description: "Hackathon chat app",
+  title: "InferMON",
+  description: "Verified AI inference paid in MON on Monad",
 };
 
 export default function Home() {

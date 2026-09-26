@@ -8,7 +8,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// @notice On-chain settlement for off-chain AI inference. Users prepay MON, providers stake MON,
 ///         the Inference Service records each request, and the Verification Service settles
 ///         spot-checked requests: PASS pays provider + verifier, FAIL slashes the provider.
-/// @dev All payouts are credited to `balances` and pulled with `withdraw` (pull-payment pattern).
+/// @dev Provider and verifier payouts go straight to their wallets. User deposits, refunds and slashed
+///      stakes stay in `balances` and are pulled with `withdraw`.
 contract InferenceTruth is Ownable, ReentrancyGuard {
     enum Status {
         None,
@@ -187,8 +188,9 @@ contract InferenceTruth is Ownable, ReentrancyGuard {
 
     // ---------------------------------------------------------------- Verification Service
 
-    /// @notice PASS: pay provider, reward verifier. FAIL: refund user, slash provider stake to the owner.
-    function submitVerdict(bytes32 requestId, bool pass) external onlyVerifier {
+    /// @notice PASS: pay the provider's wallet and the verifier's wallet directly.
+    ///         FAIL: refund the user's deposit, slash the provider's stake to the owner.
+    function submitVerdict(bytes32 requestId, bool pass) external onlyVerifier nonReentrant {
         Request storage r = requests[requestId];
         if (r.status != Status.Pending) revert NotPending();
         pendingCount[r.provider] -= 1;
@@ -197,10 +199,10 @@ contract InferenceTruth is Ownable, ReentrancyGuard {
         if (pass) {
             r.status = Status.Passed;
             uint256 reward = uint256(r.price) * verifierRewardBps / BPS;
-            balances[msg.sender] += reward;
-            balances[r.provider] += r.price - reward;
             emit Rewarded(requestId, msg.sender, reward);
             emit Paid(requestId, r.provider, r.price - reward);
+            _pay(msg.sender, reward);
+            _pay(r.provider, r.price - reward);
         } else {
             r.status = Status.Failed;
             balances[r.user] += r.price;
@@ -214,15 +216,23 @@ contract InferenceTruth is Ownable, ReentrancyGuard {
 
     // ---------------------------------------------------------------- settlement
 
-    /// @notice Pay the provider for a request that was not challenged within the window. Callable by anyone.
-    function settle(bytes32 requestId) external {
+    /// @notice Pay the provider's wallet for a request not challenged within the window. Callable by anyone.
+    function settle(bytes32 requestId) external nonReentrant {
         Request storage r = requests[requestId];
         if (r.status != Status.Pending) revert NotPending();
         if (block.timestamp < r.createdAt + challengeWindow) revert WindowOpen();
         r.status = Status.Settled;
         pendingCount[r.provider] -= 1;
-        balances[r.provider] += r.price;
         emit Paid(requestId, r.provider, r.price);
+        _pay(r.provider, r.price);
+    }
+
+    /// @dev Send MON straight to the wallet. If the recipient can't receive it (e.g. a contract
+    ///      without receive()), credit its balance instead so a verdict can never get stuck.
+    function _pay(address to, uint256 amount) private {
+        if (amount == 0) return;
+        (bool ok,) = to.call{value: amount}("");
+        if (!ok) balances[to] += amount;
     }
 
     function _send(address to, uint256 amount) private {

@@ -1,3 +1,7 @@
 machine1.env
 .ngrok.log
 .ollama.log
+machine2.env
+ollama.log
+ngrok.log
+machine3.env

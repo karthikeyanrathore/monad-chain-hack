@@ -15,9 +15,9 @@ contract InferenceTruthTest is Test {
     address machine2 = makeAddr("machine2");
 
     bytes32 constant M1B = bytes32("1B");
-    bytes32 constant M2B = bytes32("2B");
+    bytes32 constant M3B = bytes32("3B");
     uint256 constant PRICE_1B = 0.01 ether;
-    uint256 constant PRICE_2B = 0.02 ether;
+    uint256 constant PRICE_3B = 0.02 ether;
     uint256 constant MIN_STAKE = 1 ether;
     uint64 constant WINDOW = 1 hours;
     bytes32 constant REQ = keccak256("req-1");
@@ -27,7 +27,7 @@ contract InferenceTruthTest is Test {
         bytes32[] memory models = new bytes32[](2);
         uint256[] memory prices = new uint256[](2);
         (models[0], prices[0]) = (M1B, PRICE_1B);
-        (models[1], prices[1]) = (M2B, PRICE_2B);
+        (models[1], prices[1]) = (M3B, PRICE_3B);
         it = new InferenceTruth(service, verifier, MIN_STAKE, WINDOW, 1_000, 5_000, models, prices);
 
         vm.deal(user, 10 ether);
@@ -39,7 +39,7 @@ contract InferenceTruthTest is Test {
         vm.prank(machine1);
         it.stake{value: 2 ether}(M1B);
         vm.prank(machine2);
-        it.stake{value: 2 ether}(M2B);
+        it.stake{value: 2 ether}(M3B);
     }
 
     function _record(bytes32 id, address provider, bytes32 model) internal {
@@ -92,7 +92,7 @@ contract InferenceTruthTest is Test {
     function test_RevertWhen_ProviderServesOtherModel() public {
         vm.prank(service);
         vm.expectRevert(InferenceTruth.ProviderNotEligible.selector);
-        it.recordRequest(REQ, user, machine1, M2B, ANSWER);
+        it.recordRequest(REQ, user, machine1, M3B, ANSWER);
     }
 
     function test_RevertWhen_ProviderNotStaked() public {
@@ -111,21 +111,25 @@ contract InferenceTruthTest is Test {
 
     // ---------------------------------------------------------------- verdicts
 
-    function test_PassPaysProviderAndRewardsVerifier() public {
-        _record(REQ, machine2, M2B);
+    function test_PassPaysProviderAndVerifierWalletsDirectly() public {
+        _record(REQ, machine2, M3B);
+        uint256 providerBefore = machine2.balance;
+        uint256 verifierBefore = verifier.balance;
         vm.prank(verifier);
         it.submitVerdict(REQ, true);
 
-        uint256 reward = PRICE_2B / 10;
-        assertEq(it.balances(verifier), reward);
-        assertEq(it.balances(machine2), PRICE_2B - reward);
+        uint256 reward = PRICE_3B / 10;
+        assertEq(machine2.balance, providerBefore + PRICE_3B - reward);
+        assertEq(verifier.balance, verifierBefore + reward);
+        assertEq(it.balances(machine2), 0);
+        assertEq(it.balances(verifier), 0);
         assertEq(it.stakes(machine2), 2 ether);
         assertEq(it.pendingCount(machine2), 0);
         assertEq(uint8(_status(REQ)), uint8(InferenceTruth.Status.Passed));
     }
 
     function test_FailSlashesProviderAndRefundsUser() public {
-        _record(REQ, machine2, M2B);
+        _record(REQ, machine2, M3B);
         vm.prank(verifier);
         it.submitVerdict(REQ, false);
 
@@ -159,9 +163,11 @@ contract InferenceTruthTest is Test {
         vm.expectRevert(InferenceTruth.WindowOpen.selector);
         it.settle(REQ);
 
+        uint256 before = machine1.balance;
         vm.warp(block.timestamp + WINDOW);
         it.settle(REQ);
-        assertEq(it.balances(machine1), PRICE_1B);
+        assertEq(machine1.balance, before + PRICE_1B);
+        assertEq(it.balances(machine1), 0);
         assertEq(uint8(_status(REQ)), uint8(InferenceTruth.Status.Settled));
     }
 
@@ -191,16 +197,17 @@ contract InferenceTruthTest is Test {
         assertEq(it.stakes(machine1), 0);
     }
 
-    function test_ProviderWithdrawsEarnings() public {
-        _record(REQ, machine1, M1B);
-        vm.prank(verifier);
-        it.submitVerdict(REQ, true);
+    function test_ProviderThatRejectsMonIsCreditedInstead() public {
+        NoReceive provider = new NoReceive();
+        vm.deal(address(provider), 1 ether);
+        vm.prank(address(provider));
+        it.stake{value: 1 ether}(M1B);
+        _record(REQ, address(provider), M1B);
 
-        uint256 earned = it.balances(machine1);
-        uint256 before = machine1.balance;
-        vm.prank(machine1);
-        it.withdraw(earned);
-        assertEq(machine1.balance, before + earned);
+        vm.prank(verifier);
+        it.submitVerdict(REQ, true); // must not revert
+        assertEq(it.balances(address(provider)), PRICE_1B - PRICE_1B / 10);
+        assertEq(address(provider).balance, 0);
     }
 
     function test_RevertWhen_StakeForUnknownModel() public {
@@ -215,3 +222,6 @@ contract InferenceTruthTest is Test {
         it.setModelPrice(M1B, 1);
     }
 }
+
+/// A provider that cannot receive MON, to test the credit fallback.
+contract NoReceive {}

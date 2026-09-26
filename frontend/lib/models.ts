@@ -1,10 +1,9 @@
 export interface Model {
-  id: string;
+  id: "1B" | "3B"; // model size the Inference Service routes on
   name: string;
 }
 
 export const MODELS: Model[] = [
-  { id: "1", name: "llama 1B" },
-  { id: "2", name: "llama 3B" },
-//   { id: "haiku", name: "llama 3.2 1B + 2B" },
+  { id: "1B", name: "llama 1B" },
+  { id: "3B", name: "llama 3B" },
 ];

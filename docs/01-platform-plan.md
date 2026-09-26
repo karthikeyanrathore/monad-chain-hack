@@ -12,8 +12,8 @@ Full architecture: [04-inference-truth-architecture.md](04-inference-truth-archi
 | Machine | Model | Role |
 |---|---|---|
 | Machine 1 | 1B | Provider: serves 1B requests |
-| Machine 2 | 2B | Provider: serves 2B requests |
-| Machine 3 | 1B + 2B | Verifier: re-runs sampled requests |
+| Machine 2 | 3B | Provider: serves 3B requests |
+| Machine 3 | 1B + 3B | Verifier: re-runs sampled requests |
 
 ## Main flow
 ```
@@ -29,7 +29,7 @@ User / AI Agent → Inference Service → chosen model machine (Answer A) → In
 | Topic | Earlier idea | Current decision | Why |
 |---|---|---|---|
 | Where models run | AWS Lambda agents + GPU nodes | Local LLMs on 3 machines | Lambda has no GPU. Local machines are free and demo-friendly. |
-| Model sizes | 7B / 13B / 70B | 1B and 2B | They fit on ordinary laptops. |
+| Model sizes | 7B / 13B / 70B | 1B and 3B | They fit on ordinary laptops. |
 | Verification | TEE attestation | Re-run on the verifier and compare answers | TEE is too heavy for a hackathon. |
 | Verifier | Any other provider | Machine 3, which holds both models | Verification needs the *same* model the user paid for. |
 
@@ -37,9 +37,9 @@ User / AI Agent → Inference Service → chosen model machine (Answer A) → In
 1. **Smart contract:** `InferenceTruth.sol`, Foundry tests, deploy to Monad testnet. See [03-phase-1.md](03-phase-1.md).
 2. **Machine nodes:** a `/generate` endpoint on each machine wrapping its local LLM, run at fixed parameters (temperature 0, fixed seed).
 3. **Two services** (see [05-services.md](05-services.md)):
-   - **Inference Service:** routes 1B → Machine 1 and 2B → Machine 2, returns Answer A, calls `recordRequest` on-chain, then calls the Verification Service.
+   - **Inference Service:** routes 1B → Machine 1 and 3B → Machine 2, returns Answer A, calls `recordRequest` on-chain, then calls the Verification Service.
    - **Verification Service** (on Machine 3): called by the Inference Service. It samples about 1 in 10 requests, re-runs them to get Answer B, compares the answers, and calls `submitVerdict`.
-4. **Frontend:** wallet connect, deposit MON, pick 1B or 2B, send a prompt, see the answer and the settlement.
+4. **Frontend:** wallet connect, deposit MON, pick 1B or 3B, send a prompt, see the answer and the settlement.
 5. **Demo:** a cheating provider gets caught and slashed live on the Monad explorer.
 
 ## Known risks

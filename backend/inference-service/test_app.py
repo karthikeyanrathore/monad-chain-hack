@@ -19,7 +19,7 @@ def client(monkeypatch):
     monkeypatch.setattr(service, "generate", fake_generate)
     monkeypatch.setattr(service, "send_to_verifier", fake_verify)
     monkeypatch.setitem(service.MACHINES["1B"], "url", "https://machine1.ngrok.app")
-    monkeypatch.setitem(service.MACHINES, "2B", {"provider": "machine-2", "url": "http://m2:11434", "model": "gemma2:2b"})
+    monkeypatch.setitem(service.MACHINES, "3B", {"provider": "machine-2", "url": "http://m2:11434", "model": "llama3.2:3b"})
     monkeypatch.setattr(service, "VERIFIER_URL", "http://m3:9000")
     c = TestClient(service.app)
     c.calls = calls
@@ -34,11 +34,11 @@ def test_1b_routes_to_machine_1(client):
     assert client.calls["generate"] == [("https://machine1.ngrok.app", "llama3.2:1b", "hi")]
 
 
-def test_2b_routes_to_machine_2(client):
-    r = client.post("/infer", json={"model": "2B", "prompt": "hi"})
+def test_3b_routes_to_machine_2(client):
+    r = client.post("/infer", json={"model": "3B", "prompt": "hi"})
     assert r.status_code == 200
     assert r.json()["provider"] == "machine-2"
-    assert client.calls["generate"] == [("http://m2:11434", "gemma2:2b", "hi")]
+    assert client.calls["generate"] == [("http://m2:11434", "llama3.2:3b", "hi")]
 
 
 def test_calls_verifier_with_request(client):
@@ -56,10 +56,11 @@ def test_no_verifier_configured_skips_call(client, monkeypatch):
     assert client.calls["verify"] == []
 
 
-def test_unconfigured_model_returns_503(client, monkeypatch):
-    monkeypatch.setitem(service.MACHINES, "2B", {"provider": "machine-2", "url": None, "model": None})
-    r = client.post("/infer", json={"model": "2B", "prompt": "hi"})
-    assert r.status_code == 503
+def test_unconfigured_model_says_machine_is_not_up(client, monkeypatch):
+    monkeypatch.setitem(service.MACHINES, "3B", {"provider": "machine-2", "url": None, "model": None})
+    r = client.post("/infer", json={"model": "3B", "prompt": "hi"})
+    assert r.status_code == 502
+    assert r.json()["detail"].startswith("Machine 2 running the llama 3B model is not up right now.")
 
 
 def test_unknown_model_or_empty_prompt_rejected(client):
@@ -74,6 +75,8 @@ def test_machine_failure_returns_502(client, monkeypatch):
     monkeypatch.setattr(service, "generate", broken)
     r = client.post("/infer", json={"model": "1B", "prompt": "hi"})
     assert r.status_code == 502
+    assert r.json()["detail"].startswith("Machine 1 running the llama 1B model is not up right now.")
+    assert "refused" not in r.json()["detail"]  # no technical details for users
     assert client.calls["verify"] == []
 
 

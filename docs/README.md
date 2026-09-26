@@ -11,4 +11,4 @@ Decentralized AI inference on Monad. Machines run LLMs off-chain, a verifier spo
 | [05-services.md](05-services.md) | Inference Service and Verification Service: the Inference Service routes to the chosen model and calls the Verification Service |
 | [inference-truth-architecture.html](inference-truth-architecture.html) | Visual diagram (also published: https://claude.ai/artifact/2GcWK9QJNfnELiu5wqNGWY) |
 
-**Setup:** Machine 1 runs 1B, Machine 2 runs 2B, and Machine 3 is the verifier with both models.
+**Setup:** Machine 1 runs 1B, Machine 2 runs 3B, and Machine 3 is the verifier with both models.

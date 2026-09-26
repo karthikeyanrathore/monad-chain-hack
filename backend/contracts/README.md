@@ -28,7 +28,7 @@ export VERIFIER=0x...            # Machine 3 wallet
 forge script script/Deploy.s.sol --rpc-url monad_testnet --broadcast --account deployer \
   --sender $(cast wallet address --account deployer) --gas-estimate-multiplier 110
 ```
-Defaults (override with env): `MIN_STAKE` 0.1 MON, `CHALLENGE_WINDOW` 600 s, `PRICE_1B` 0.001 MON, `PRICE_2B` 0.002 MON, `VERIFIER_REWARD_BPS` 1000, `SLASH_BPS` 5000.
+Defaults (override with env): `MIN_STAKE` 0.1 MON, `CHALLENGE_WINDOW` 600 s, `PRICE_1B` 0.001 MON, `PRICE_3B` 0.003 MON, `VERIFIER_REWARD_BPS` 1000, `SLASH_BPS` 5000.
 
 Each provider machine then stakes:
 ```bash

@@ -1,7 +1,7 @@
 # Trustless AI Inference on Monad
 
 **Inference Truth** is decentralized AI inference on Monad:
-- Users pay in MON and pick a model (1B or 2B).
+- Users pay in MON and pick a model (1B or 3B).
 - Independent machines run the LLMs locally.
 - A verifier machine spot-checks a random sample of answers.
 - The `InferenceTruth` contract pays honest machines and slashes cheaters.
@@ -10,6 +10,7 @@
 |---|---|
 | [`backend/contracts/`](backend/contracts/README.md) | `InferenceTruth.sol` (Foundry): deposits, staking, escrow, verdicts, slashing |
 | [`backend/inference-service/`](backend/inference-service/README.md) | FastAPI entry point: routes prompts to the chosen model, handles MON deposits, records requests on-chain |
+| [`backend/verification-service/`](backend/verification-service/README.md) | Re-runs sampled requests on Machine 3, sends PASS/FAIL on-chain. PASS pays the provider's wallet |
 | [`backend/scripts/`](backend/scripts/) | Step-by-step Monad testnet scripts |
 | [`frontend/`](frontend/README.md) | Next.js chat UI |
 | [`docs/`](docs/README.md) | Plan, architecture, verification design, service specs |
@@ -17,8 +18,8 @@
 | Machine | Model | Role |
 |---|---|---|
 | Machine 1 (this laptop) | `llama3.2:1b` | Provider for 1B requests |
-| Machine 2 (external) | 2B model | Provider for 2B requests |
-| Machine 3 (external) | 1B + 2B | Verification Service (not built yet) |
+| Machine 2 (external) | `llama3.2:3b` | Provider for 3B requests |
+| Machine 3 (external) | `llama3.2:1b` + `llama3.2:3b` | Verifier: the Verification Service re-runs requests on it |
 
 ## Prerequisites
 - [Foundry](https://getfoundry.sh) (`forge`, `cast`, `anvil`)
@@ -29,6 +30,7 @@ Set up once:
 ```bash
 (cd backend/contracts && forge install --no-git foundry-rs/forge-std@v1.16.2 OpenZeppelin/openzeppelin-contracts@v5.7.0)
 (cd backend/inference-service && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt)
+(cd backend/verification-service && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt)
 ```
 
 ## Run on Monad testnet
@@ -38,17 +40,27 @@ Chain ID `10143`, RPC `https://testnet-rpc.monad.xyz`, faucet https://testnet.mo
 The scripts save what they create and read it back automatically: wallet addresses in `backend/scripts/wallets.env`, Machine 1's ngrok URL in `backend/scripts/machine1.env`, and the contract address in `backend/scripts/deployed.env`.
 ```bash
 cd backend/scripts
-./01-create-wallets.sh           # one time: deployer, machine1, user (saves addresses)
-./02-fund-wallets.sh 0.5         # deployer sends MON to machine1 and user (fund deployer from the faucet first)
+./01-create-wallets.sh           # one time: deployer, verifier, machine1, machine2, user (saves addresses)
+./02-fund-wallets.sh 0.5         # deployer sends MON to verifier, machine1, machine2 and user (fund deployer from the faucet first)
+./import-user.sh                 # one time: import the user's MetaMask key so scripts can sign as ME
 ./03-deploy.sh                   # deploy InferenceTruth (refuses if already deployed; --force for a new one)
-./04-stake.sh 0.2                # machine1 stakes for 1B
+./04-stake.sh 0.2 machine1       # machine1 stakes for 1B
+./04-stake.sh 0.2 machine2       # machine2 stakes for 3B
 ./machine1-serve.sh              # Machine 1: Ollama behind a public ngrok URL (keep running)
-./05-start-service.sh            # Inference Service, calls Machine 1 via that URL (keep running)
+./05b-start-verifier.sh          # Verification Service on :9000, re-runs on Machine 3 (keep running)
+./05-start-service.sh            # Inference Service on :8000, calls machines + verifier (keep running)
 ./06-deposit.sh 0.1              # user deposits MON
 ./07-balance.sh                  # wallet balances + deposit, stake, earnings, pending requests
-./08-prompt.sh "What is 2+2?"    # signed paid prompt (auto nonce), shows the amount charged
+./08-prompt.sh "What is 2+2?"    # signed paid 1B prompt (auto nonce), shows the amount charged
+./08-prompt.sh "What is 2+2?" 3B # same, on Machine 2's 3B model
 ./09-withdraw.sh 0.05            # user withdraws MON
+./11-verdict.sh 0x<request_id>   # PASS/FAIL, similarity and payout tx for one request
+./settle-pending.sh              # pay providers for requests that never got a verdict (DRY_RUN=1 to preview)
+./refund-slash.sh machine1       # undo a wrong slash: deployer sends the slashed MON back
+./test-machine2.sh [--paid]      # check Machine 2: reachable, llama3.2:3b installed, deterministic, service sees 3B
 ```
+
+**Serving models on any machine:** copy `backend/scripts/serve-models.sh` there and run `./serve-models.sh 1B`, `./serve-models.sh 3B` or `./serve-models.sh 1B 3B`. It starts Ollama, pulls the models and prints a public ngrok URL. Add `NGROK_URL=<your-domain>.ngrok-free.dev` to keep the URL fixed.
 
 ### Manual way: step by step
 
@@ -124,6 +136,7 @@ cast send $(echo $TX | jq -r .to) $(echo $TX | jq -r .data) --gas-limit $(cast t
 ```bash
 (cd backend/contracts && forge test)                     # 18 contract tests
 (cd backend/inference-service && .venv/bin/pytest -q)     # 16 service tests
+(cd backend/verification-service && .venv/bin/pytest -q)  # 7 verifier tests
 ```
 API docs: http://localhost:8000/docs
 
@@ -132,5 +145,5 @@ API docs: http://localhost:8000/docs
   - The contract and its tests.
   - The Inference Service: routing, deposits and withdrawals, signed paid requests, `recordRequest`.
 - **Next:**
-  - The Verification Service on Machine 3.
+  - Semantic (embedding) comparison, so short answers can't hide a model swap.
   

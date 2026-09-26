@@ -143,7 +143,7 @@
       <rect x="68" y="248" width="74" height="24" rx="6" fill="rgba(63,208,201,.22)" stroke="#3FD0C9" stroke-width="1.2"/>
       <text class="t-mono c-teal" x="105" y="264" text-anchor="middle">1B</text>
       <rect x="148" y="248" width="74" height="24" rx="6" fill="#0A0912" stroke="#2C2844"/>
-      <text class="t-mono t-muted" x="185" y="264" text-anchor="middle">2B</text>
+      <text class="t-mono t-muted" x="185" y="264" text-anchor="middle">3B</text>
       <circle cx="74" cy="294" r="4" class="c-violet"/><text class="t-body" x="86" y="298">Pays in MON</text>
       <circle cx="74" cy="320" r="4" class="c-teal"/><text class="t-body" x="86" y="324">Receives answer</text>
 
@@ -162,7 +162,7 @@
       <rect x="318" y="236" width="194" height="24" rx="6" fill="rgba(63,208,201,.16)" stroke="#3FD0C9" stroke-width="1"/>
       <text class="t-mono c-teal" x="330" y="252">1B → MACHINE 1</text>
       <rect x="318" y="266" width="194" height="24" rx="6" fill="#0A0912" stroke="#2C2844"/>
-      <text class="t-mono t-muted" x="330" y="282">2B → MACHINE 2</text>
+      <text class="t-mono t-muted" x="330" y="282">3B → MACHINE 2</text>
       <text class="t-body" x="318" y="318"><tspan class="c-teal" font-weight="600">2</tspan>  Answer A → user</text>
       <text class="t-body" x="318" y="344"><tspan class="c-amber" font-weight="600">3</tspan>  Call Verification Service</text>
       <text class="t-body" x="318" y="370"><tspan class="c-violet" font-weight="600">4</tspan>  Record request on-chain</text>
@@ -173,7 +173,7 @@
       <path class="a a-teal a-thin" d="M615,222 H534" marker-end="url(#m-teal)"/>
       <text class="t-mono c-teal" x="572" y="240" text-anchor="middle">answer A</text>
       <path class="a a-thin" d="M530,300 H611" stroke="#9A94B8" stroke-dasharray="4 4" marker-end="url(#m-muted)"/>
-      <text class="t-mono t-muted" x="570" y="292" text-anchor="middle">2B</text>
+      <text class="t-mono t-muted" x="570" y="292" text-anchor="middle">3B</text>
 
       <!-- Inference Service -> Verification Service -->
       <path class="a a-amber" d="M415,148 V100 H1090 V106" marker-end="url(#m-amber)" style="stroke-dasharray:none"/>
@@ -200,16 +200,16 @@
         <text class="t-name" x="376" y="292">Machine 2</text>
         <text class="t-mono t-muted" x="376" y="310">LOCAL LLM</text>
         <rect x="462" y="278" width="50" height="24" rx="6" fill="#0A0912" stroke="#9A94B8" stroke-width="1.2"/>
-        <text class="t-mono" x="487" y="295" text-anchor="middle" font-weight="600">2B</text>
+        <text class="t-mono" x="487" y="295" text-anchor="middle" font-weight="600">3B</text>
         <rect x="331" y="324" width="178" height="26" rx="13" fill="rgba(154,148,184,.12)"/>
-        <text class="t-mono t-muted" x="420" y="341" text-anchor="middle">SERVES 2B REQUESTS</text>
+        <text class="t-mono t-muted" x="420" y="341" text-anchor="middle">SERVES 3B REQUESTS</text>
 
         <rect class="box-amber" x="315" y="376" width="210" height="100" rx="12"/>
         <use href="#machine" x="333" y="394" style="color:var(--amber)"/>
         <text class="t-name" x="376" y="406">Machine 3</text>
         <text class="t-mono t-muted" x="376" y="424">LOCAL LLM</text>
         <rect x="452" y="392" width="60" height="24" rx="6" fill="#0A0912" stroke="#F5B544" stroke-width="1.2"/>
-        <text class="t-mono" x="482" y="409" text-anchor="middle" font-weight="600">1B+2B</text>
+        <text class="t-mono" x="482" y="409" text-anchor="middle" font-weight="600">1B+3B</text>
         <rect x="331" y="438" width="178" height="26" rx="13" fill="rgba(245,181,68,.14)"/>
         <text class="t-mono c-amber" x="420" y="455" text-anchor="middle">VERIFIER · RUNS 1B</text>
 
@@ -309,9 +309,9 @@
         <rect class="inset" x="318" y="718" width="204" height="36" rx="9"/>
         <text class="t-body" x="332" y="741">Machine 1</text><text class="t-mono c-violet" x="508" y="741" text-anchor="end">1B · STAKED</text>
         <rect class="inset" x="318" y="762" width="204" height="36" rx="9"/>
-        <text class="t-body" x="332" y="785">Machine 2</text><text class="t-mono c-violet" x="508" y="785" text-anchor="end">2B · STAKED</text>
+        <text class="t-body" x="332" y="785">Machine 2</text><text class="t-mono c-violet" x="508" y="785" text-anchor="end">3B · STAKED</text>
         <rect class="inset" x="318" y="806" width="204" height="36" rx="9"/>
-        <text class="t-body" x="332" y="829">Machine 3</text><text class="t-mono c-violet" x="508" y="829" text-anchor="end">1B+2B · STAKED</text>
+        <text class="t-body" x="332" y="829">Machine 3</text><text class="t-mono c-violet" x="508" y="829" text-anchor="end">1B+3B · STAKED</text>
         <text class="t-muted" x="420" y="866" text-anchor="middle">Locked while serving</text>
       </g>
 
@@ -348,8 +348,8 @@
   </div>
 
   <ol class="flow">
-    <li><i class="inf">INFERENCE</i><b>Prompt + pay</b><span>User or AI agent sends a prompt with 1B or 2B to the Inference Service and locks MON.</span></li>
-    <li><i class="inf">INFERENCE</i><b>Route</b><span>Inference Service calls Machine 1 for 1B or Machine 2 for 2B.</span></li>
+    <li><i class="inf">INFERENCE</i><b>Prompt + pay</b><span>User or AI agent sends a prompt with 1B or 3B to the Inference Service and locks MON.</span></li>
+    <li><i class="inf">INFERENCE</i><b>Route</b><span>Inference Service calls Machine 1 for 1B or Machine 2 for 3B.</span></li>
     <li><i class="inf">INFERENCE</i><b>Answer</b><span>Answer A goes back to the user and the request is recorded on-chain.</span></li>
     <li><i class="ver">VERIFICATION</i><b>Verify</b><span>Inference Service calls the Verification Service, which samples and re-runs on Machine 3 for Answer B.</span></li>
     <li><i class="ver">VERIFICATION</i><b>Compare</b><span>Semantic similarity of A and B decides PASS or FAIL.</span></li>

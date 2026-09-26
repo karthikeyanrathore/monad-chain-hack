@@ -5,7 +5,7 @@ The entry point of Inference Truth. It sends each prompt to the machine running 
 | Model | Machine | Where |
 |---|---|---|
 | 1B | Machine 1 | this laptop, `llama3.2:1b` |
-| 2B | Machine 2 | external machine |
+| 3B | Machine 2 | external machine, `llama3.2:3b` |
 | — | Machine 3 | external machine, Verification Service |
 
 The service calls each machine's **Ollama API** (`POST /api/generate`) directly, with fixed parameters `temperature 0, seed 42, num_predict 256` so the verifier can reproduce the answer.
@@ -26,8 +26,8 @@ OLLAMA_HOST=0.0.0.0 ollama serve
 ## Endpoints
 | Method | Path | What it does |
 |---|---|---|
-| `POST` | `/infer` | Body: `{"model": "1B" \| "2B", "prompt": "...", "nonce": 1, "signature": "0x..."}`. Returns `{request_id, model, provider, answer, user, tx_hash}` |
-| `GET` | `/models` | Lists 1B and 2B, whether each is configured, and `price_wei` |
+| `POST` | `/infer` | Body: `{"model": "1B" \| "3B", "prompt": "...", "nonce": 1, "signature": "0x..."}`. Returns `{request_id, model, provider, answer, user, tx_hash}` |
+| `GET` | `/models` | Lists 1B and 3B, whether each is configured, and `price_wei` |
 | `GET` | `/account/{address}` | Deposited balance, wallet balance and stake (all in wei) |
 | `POST` | `/tx/deposit` | Body: `{"address": "0x...", "amount": "1.5"}` (MON). Returns an **unsigned** `deposit()` transaction |
 | `POST` | `/tx/withdraw` | Same body. Returns an **unsigned** `withdraw(amount)` transaction |
