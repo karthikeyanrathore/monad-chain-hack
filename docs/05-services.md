@@ -86,9 +86,9 @@ The external machines must start Ollama with `OLLAMA_HOST=0.0.0.0` so they accep
    - When Machine 2 runs in cheat mode, a request leads to a FAIL transaction and a `Slashed` event.
 
 ## Implementation status
-- **Inference Service:** built in [`inference-service/`](../inference-service/README.md).
+- **Inference Service:** built in [`backend/inference-service/`](../backend/inference-service/README.md).
   - Endpoints: `POST /infer`, `GET /models`, `GET /health`.
   - Calls the Verification Service's `/verify` when `VERIFIER_URL` is set.
   - On-chain mode: user deposits and withdrawals through unsigned transactions (`/tx/deposit`, `/tx/withdraw`), `/account/{address}`, signed `/infer`, and `recordRequest` after each answer.
-- **Contract:** `InferenceTruth.sol` in [`contracts/`](../contracts/README.md), with 18 Foundry tests. Not yet deployed to testnet.
+- **Contract:** `InferenceTruth.sol` in [`backend/contracts/`](../backend/contracts/README.md), with 18 Foundry tests. Deployed to Monad testnet at `0x6b96259Ee3F4273E11E697b84ea8513ea30283e6`.
 - **Verification Service:** not started.

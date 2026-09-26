@@ -8,8 +8,9 @@
 
 | Folder | What's inside |
 |---|---|
-| [`contracts/`](contracts/README.md) | `InferenceTruth.sol` (Foundry): deposits, staking, escrow, verdicts, slashing |
-| [`inference-service/`](inference-service/README.md) | FastAPI entry point: routes prompts to the chosen model, handles MON deposits, records requests on-chain |
+| [`backend/contracts/`](backend/contracts/README.md) | `InferenceTruth.sol` (Foundry): deposits, staking, escrow, verdicts, slashing |
+| [`backend/inference-service/`](backend/inference-service/README.md) | FastAPI entry point: routes prompts to the chosen model, handles MON deposits, records requests on-chain |
+| [`backend/scripts/`](backend/scripts/) | Step-by-step Monad testnet scripts |
 | [`frontend/`](frontend/README.md) | Next.js chat UI |
 | [`docs/`](docs/README.md) | Plan, architecture, verification design, service specs |
 
@@ -26,17 +27,17 @@
 
 Set up once:
 ```bash
-(cd contracts && forge install --no-git foundry-rs/forge-std@v1.16.2 OpenZeppelin/openzeppelin-contracts@v5.7.0)
-(cd inference-service && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt)
+(cd backend/contracts && forge install --no-git foundry-rs/forge-std@v1.16.2 OpenZeppelin/openzeppelin-contracts@v5.7.0)
+(cd backend/inference-service && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt)
 ```
 
 ## Run on Monad testnet
 Chain ID `10143`, RPC `https://testnet-rpc.monad.xyz`, faucet https://testnet.monad.xyz, explorer https://testnet.monadvision.com
 
 ### Quick way: step scripts
-The scripts save what they create and read it back automatically: wallet addresses in `scripts/wallets.env`, Machine 1's ngrok URL in `scripts/machine1.env`, and the contract address in `scripts/deployed.env`.
+The scripts save what they create and read it back automatically: wallet addresses in `backend/scripts/wallets.env`, Machine 1's ngrok URL in `backend/scripts/machine1.env`, and the contract address in `backend/scripts/deployed.env`.
 ```bash
-cd scripts
+cd backend/scripts
 ./01-create-wallets.sh           # one time: deployer, machine1, user (saves addresses)
 ./02-fund-wallets.sh 0.5         # deployer sends MON to machine1 and user (fund deployer from the faucet first)
 ./03-deploy.sh                   # deploy InferenceTruth (refuses if already deployed; --force for a new one)
@@ -69,7 +70,7 @@ echo $DEPLOYER $MACHINE1 $ME
 **3. Deploy the contract** (one transaction: the prices are set in the constructor)
 ```bash
 export RPC=https://testnet-rpc.monad.xyz
-cd contracts
+cd backend/contracts
 INFERENCE_SERVICE=$DEPLOYER VERIFIER=$DEPLOYER forge script script/Deploy.s.sol \
   --rpc-url $RPC --broadcast --account deployer --sender $DEPLOYER --gas-estimate-multiplier 110
 export CONTRACT=0x...   # the "InferenceTruth deployed at" address printed above
@@ -121,8 +122,8 @@ cast send $(echo $TX | jq -r .to) $(echo $TX | jq -r .data) --gas-limit $(cast t
 
 ## Tests
 ```bash
-(cd contracts && forge test)                     # 18 contract tests
-(cd inference-service && .venv/bin/pytest -q)     # 16 service tests
+(cd backend/contracts && forge test)                     # 18 contract tests
+(cd backend/inference-service && .venv/bin/pytest -q)     # 16 service tests
 ```
 API docs: http://localhost:8000/docs
 
